@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [],
+      "project": []
+    },
+    "packages/tln": {
+      "entry": ["src/**/*.test-d.ts"]
+    },
+    "apps/docs": {
+      "entry": ["src/app/**/{page,layout,route,not-found}.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["tailwindcss"]
+    }
+  }
+}

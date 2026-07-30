@@ -1,0 +1,14 @@
+packages:
+  - packages/*
+  - apps/*
+
+# Single source of truth for versions shared across workspaces.
+# Referenced as `"typescript": "catalog:"` in each package.json.
+catalog:
+  typescript: ^6.0.3
+  '@types/node': ^26.1.2
+
+# pnpm 10 blocks install scripts by default; these are needed by the toolchain.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp

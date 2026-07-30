@@ -1,0 +1,32 @@
+---
+title: Installation
+description: Requirements and install commands
+---
+
+## Requirements
+
+- Node.js `>=22.14.0`
+- An ESM project (`"type": "module"`) or a bundler. The package ships ESM only —
+  CommonJS consumers need a dynamic `import()`.
+
+## Install
+
+```bash tab="pnpm"
+pnpm add @brunobertolini/tln
+```
+
+```bash tab="npm"
+npm install @brunobertolini/tln
+```
+
+```bash tab="bun"
+bun add @brunobertolini/tln
+```
+
+## Verify
+
+```ts
+import { format } from '@brunobertolini/tln';
+
+console.log(format('  it works  '));
+```
