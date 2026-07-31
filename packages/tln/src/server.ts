@@ -1,4 +1,11 @@
 import { assertUniqueProviders, makeReporter, messageOf, resolveEvent } from './dispatch.js';
+
+export {
+  type Ga4ServerConfig,
+  type Ga4ServerCredentials,
+  ga4,
+} from './providers/ga4.server.js';
+
 import type {
   ActionSource,
   ConsentState,

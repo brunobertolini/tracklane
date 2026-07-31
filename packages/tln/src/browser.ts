@@ -1,4 +1,7 @@
 import { assertUniqueProviders, makeReporter, messageOf, resolveEvent } from './dispatch.js';
+
+export { type Ga4BrowserConfig, ga4 } from './providers/ga4.browser.js';
+
 import type {
   ConsentState,
   EventBinding,
