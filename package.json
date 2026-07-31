@@ -1,9 +1,9 @@
 {
-  "name": "tln-monorepo",
+  "name": "tracklane-monorepo",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Monorepo for the tln library and its documentation site",
+  "description": "Monorepo for the tracklane library and its documentation site",
   "license": "MIT",
   "packageManager": "pnpm@10.26.2",
   "engines": {

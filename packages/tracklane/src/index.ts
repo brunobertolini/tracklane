@@ -2,8 +2,8 @@
  * Types only — the vocabulary shared by both libraries, plus the two
  * provider contracts.
  *
- * The runtime lives behind `@brunobertolini/tln/browser` and
- * `@brunobertolini/tln/server`. They are separate entry points because they
+ * The runtime lives behind `tracklane/browser` and
+ * `tracklane/server`. They are separate entry points because they
  * are separate libraries: no shared runtime, no shared state, nothing in
  * common but the vocabulary below. Importing one never pulls in the other.
  *
@@ -12,7 +12,7 @@
  *
  * @example
  * ```ts
- * import type { BrowserProvider, EventData, TrackOptions } from '@brunobertolini/tln';
+ * import type { BrowserProvider, EventData, TrackOptions } from 'tracklane';
  *
  * export const tiktok = (pixelId: string): BrowserProvider => ({
  *   name: 'tiktok',

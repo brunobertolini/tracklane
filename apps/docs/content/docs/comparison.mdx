@@ -3,7 +3,7 @@ title: Comparison
 description: Why not Segment, GTM, or a library per provider
 ---
 
-This problem has been solved before, at other sizes. Here is where `tln` sits and where the
+This problem has been solved before, at other sizes. Here is where `tracklane` sits and where the
 alternatives are the better answer — because sometimes they are.
 
 ## Customer data platforms
@@ -16,7 +16,7 @@ with a data warehouse as the primary target.
 **Choose them when** you need a warehouse as the source of truth, identity resolution across
 systems, or transformations applied centrally after the fact.
 
-**Why `tln` exists next to them:** they are infrastructure. Even the open-source ones need a
+**Why `tracklane` exists next to them:** they are infrastructure. Even the open-source ones need a
 service running, maintained and paid for — a container, a pipeline, a queue. If you have five
 pixels in a Next.js app, you do not want to operate a data pipeline; you want to stop writing
 the same call five times. Ad conversion is also a second-class citizen in that world, where the
@@ -31,9 +31,9 @@ They move the integration into a container edited outside your codebase.
 **Choose them when** marketing needs to ship tracking changes without engineering. That is a
 real requirement and tag managers serve it well.
 
-**Why `tln` exists next to them:** the price is that tracking logic leaves the repository. No
+**Why `tracklane` exists next to them:** the price is that tracking logic leaves the repository. No
 types, no code review, no tests, no git history, and it is editable in production by people who
-never open the repo. Server-side GTM adds hosting on top. `tln` is for teams who want tracking
+never open the repo. Server-side GTM adds hosting on top. `tracklane` is for teams who want tracking
 to be code — reviewed in a pull request, typed, and shipped with the release that needs it.
 
 ## Client-side abstractions
@@ -44,9 +44,9 @@ The closest in shape: a plugin per provider, with `track` and `identify` on top.
 
 **Choose them when** the browser is the whole problem.
 
-**Why `tln` exists next to them:** they stop at the browser. There is no path to the conversion
+**Why `tracklane` exists next to them:** they stop at the browser. There is no path to the conversion
 APIs, which is half the problem now — without a server-side path, tracker blocking and
-third-party cookie loss quietly sink your measurement. `tln` treats browser and server as two
+third-party cookie loss quietly sink your measurement. `tracklane` treats browser and server as two
 entry points of one interface.
 
 ## One library per provider
@@ -57,11 +57,11 @@ Each wraps one provider, usually well.
 
 **Choose them when** you have exactly one provider and expect to keep it that way.
 
-**Why `tln` exists next to them:** N of them *is* the original problem — N APIs, N
+**Why `tracklane` exists next to them:** N of them *is* the original problem — N APIs, N
 vocabularies, and N places to change when the next one arrives.
 
 ## In short
 
-`tln` is a library, not infrastructure. It has no service to run, keeps tracking in your
+`tracklane` is a library, not infrastructure. It has no service to run, keeps tracking in your
 codebase and under review, speaks both the browser and the conversion APIs, and translates one
 vocabulary into many. It has no opinion about anything else — which is the point.

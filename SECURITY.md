@@ -7,7 +7,7 @@ Only the latest published minor version receives security fixes.
 ## Reporting a vulnerability
 
 Report privately through
-[GitHub Security Advisories](https://github.com/brunobertolini/tln/security/advisories/new).
+[GitHub Security Advisories](https://github.com/brunobertolini/tracklane/security/advisories/new).
 Please do not open a public issue.
 
 Expect an acknowledgement within 7 days. Once a fix is released, the advisory is

@@ -152,7 +152,7 @@ function parseCookies(
  *
  * @example
  * ```ts
- * import { createTracking, ga4 } from '@brunobertolini/tln/server';
+ * import { createTracking, ga4 } from 'tracklane/server';
  *
  * const { track } = createTracking({
  *   providers: [ga4({ measurementId: 'G-XXXXXXX', apiSecret })],

@@ -1,4 +1,4 @@
-export const appName = 'tln';
+export const appName = 'tracklane';
 export const docsRoute = '/docs';
 export const docsImageRoute = '/og/docs';
 export const docsContentRoute = '/llms.mdx/docs';
@@ -7,10 +7,10 @@ export const docsContentRoute = '/llms.mdx/docs';
 // static search index) are not rewritten by Next and need it explicitly.
 export const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
-export const siteUrl = 'https://brunobertolini.github.io/tln';
+export const siteUrl = 'https://brunobertolini.github.io/tracklane';
 
 export const gitConfig = {
   user: 'brunobertolini',
-  repo: 'tln',
+  repo: 'tracklane',
   branch: 'main',
 };

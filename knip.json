@@ -5,7 +5,7 @@
       "entry": ["scripts/*.mjs"],
       "project": ["scripts/*.mjs"]
     },
-    "packages/tln": {
+    "packages/tracklane": {
       "entry": ["src/**/*.test-d.ts"]
     },
     "apps/docs": {

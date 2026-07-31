@@ -85,11 +85,11 @@ function consentBody(state: ConsentState | undefined): Record<string, string> | 
  *
  * @param credentials - The measurement id and API secret.
  * @param config - Rarely needed event name overrides.
- * @returns A provider for `createTracking` from `@brunobertolini/tln/server`.
+ * @returns A provider for `createTracking` from `tracklane/server`.
  *
  * @example
  * ```ts
- * import { createTracking, ga4 } from '@brunobertolini/tln/server';
+ * import { createTracking, ga4 } from 'tracklane/server';
  *
  * const { track } = createTracking({
  *   providers: [ga4({ measurementId: 'G-XXXXXXX', apiSecret: process.env.GA4_SECRET! })],

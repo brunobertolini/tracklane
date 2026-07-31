@@ -114,7 +114,7 @@ Read it before proposing a change to any of the above.
 
 ## Rules
 
-- The published package is `packages/tln`. It ships ESM only. Never add a CJS
+- The published package is `packages/tracklane`. It ships ESM only. Never add a CJS
   build, `require` conditions or `main`-first exports.
 - `exports` must keep `"types"` as the first condition.
 - Public API needs TSDoc — the docs site generates its type tables from it.
@@ -122,8 +122,8 @@ Read it before proposing a change to any of the above.
 - The docs site is a **static export**. Server-only features (route handlers with
   runtime logic, ISR, middleware, server actions, dynamic OG) do not work.
 - Do not add git hooks, commitlint, husky or lefthook. CI is the gate.
-- `pnpm dev` serves the docs at `https://tln-docs.localhost` (in a worktree:
-  `https://<branch>.tln-docs.localhost`) — there is no fixed port to assume. Read the
+- `pnpm dev` serves the docs at `https://tracklane-docs.localhost` (in a worktree:
+  `https://<branch>.tracklane-docs.localhost`) — there is no fixed port to assume. Read the
   URL from portless' output, or use `dev:raw` when a plain port is required (Playwright,
   probes). Never hardcode `localhost:3000`.
 - Any user-facing change needs `pnpm changeset`.
@@ -135,7 +135,7 @@ the `paths:` in its frontmatter.
 
 | Working on                        | Read                            |
 | --------------------------------- | ------------------------------- |
-| `packages/tln/src/**`             | `.claude/rules/library-api.md`  |
+| `packages/tracklane/src/**`             | `.claude/rules/library-api.md`  |
 | `*.test.ts`, `*.test-d.ts`        | `.claude/rules/testing.md`      |
 | `apps/docs/**`                    | `.claude/rules/docs-site.md`    |
 

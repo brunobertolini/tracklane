@@ -1,5 +1,5 @@
 {
-  "name": "@brunobertolini/tln-docs",
+  "name": "tracklane-docs",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "@brunobertolini/tln": "workspace:*",
+    "tracklane": "workspace:*",
     "fumadocs-core": "16.14.0",
     "fumadocs-mdx": "15.2.1",
     "fumadocs-typescript": "5.3.0",

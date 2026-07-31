@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     default: appName,
     template: `%s · ${appName}`,
   },
-  description: 'Documentation for the tln TypeScript library',
+  description: 'Documentation for the tracklane TypeScript library',
 };
 
 export default function Layout({ children }: LayoutProps<'/'>) {

@@ -87,7 +87,7 @@ export interface BrowserTracking {
  *
  * @example
  * ```ts
- * import { createTracking, ga4 } from '@brunobertolini/tln/browser';
+ * import { createTracking, ga4 } from 'tracklane/browser';
  *
  * const { track } = createTracking({ providers: [ga4('G-XXXXXXX')] });
  * track('purchase', { transaction_id: 'T-1', value: 49.9, currency: 'BRL' });

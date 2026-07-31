@@ -1,5 +1,5 @@
-import { createTracking } from '@brunobertolini/tln/server';
 import Link from 'next/link';
+import { createTracking } from 'tracklane/server';
 import { appName, gitConfig } from '@/lib/shared';
 
 // Runs the published API at build time: if the library breaks, the docs

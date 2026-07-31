@@ -15,27 +15,27 @@ vocabulary below, which is what makes `purchase` mean the same thing on both sid
 What the business says happened, spelled the way GA4 spells it. The bag stays open — a business
 measures things this vocabulary does not name.
 
-<AutoTypeTable path="../../packages/tln/src/vocabulary.ts" name="EventData" />
+<AutoTypeTable path="../../packages/tracklane/src/vocabulary.ts" name="EventData" />
 
 ### `UserData`
 
 Who the person is. One identifier, translated into each vendor's own name. Values stay raw:
 hashing is a field format each vendor defines, applied inside its adapter.
 
-<AutoTypeTable path="../../packages/tln/src/vocabulary.ts" name="UserData" />
+<AutoTypeTable path="../../packages/tracklane/src/vocabulary.ts" name="UserData" />
 
 ### `ConsentState`
 
 Google's signals, adopted verbatim. Every other vendor receives a collapse of these — never an
 expansion. An absent signal produces no key.
 
-<AutoTypeTable path="../../packages/tln/src/vocabulary.ts" name="ConsentState" />
+<AutoTypeTable path="../../packages/tracklane/src/vocabulary.ts" name="ConsentState" />
 
 ### `TrackingError`
 
 The one diagnostic channel. It never carries event contents.
 
-<AutoTypeTable path="../../packages/tln/src/vocabulary.ts" name="TrackingError" />
+<AutoTypeTable path="../../packages/tracklane/src/vocabulary.ts" name="TrackingError" />
 
 ## Browser
 
@@ -43,18 +43,18 @@ The one diagnostic channel. It never carries event contents.
 
 The only thing the browser needs beyond the event itself.
 
-<AutoTypeTable path="../../packages/tln/src/browser.ts" name="TrackOptions" />
+<AutoTypeTable path="../../packages/tracklane/src/browser.ts" name="TrackOptions" />
 
 ### `BrowserTracking`
 
-<AutoTypeTable path="../../packages/tln/src/browser.ts" name="BrowserTracking" />
+<AutoTypeTable path="../../packages/tracklane/src/browser.ts" name="BrowserTracking" />
 
 ### `BrowserProvider`
 
 The whole contract for a browser destination. Providers shipped here get no shortcut your own
 does not have.
 
-<AutoTypeTable path="../../packages/tln/src/browser.ts" name="BrowserProvider" />
+<AutoTypeTable path="../../packages/tracklane/src/browser.ts" name="BrowserProvider" />
 
 ## Server
 
@@ -62,12 +62,12 @@ does not have.
 
 Who, when and where — everything a conversion API needs beyond the event itself.
 
-<AutoTypeTable path="../../packages/tln/src/server.ts" name="EventContext" />
+<AutoTypeTable path="../../packages/tracklane/src/server.ts" name="EventContext" />
 
 ### `ServerTracking`
 
-<AutoTypeTable path="../../packages/tln/src/server.ts" name="ServerTracking" />
+<AutoTypeTable path="../../packages/tracklane/src/server.ts" name="ServerTracking" />
 
 ### `ServerProvider`
 
-<AutoTypeTable path="../../packages/tln/src/server.ts" name="ServerProvider" />
+<AutoTypeTable path="../../packages/tracklane/src/server.ts" name="ServerProvider" />

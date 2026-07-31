@@ -12,15 +12,15 @@ description: Requirements and install commands
 ## Install
 
 ```bash tab="pnpm"
-pnpm add @brunobertolini/tln
+pnpm add tracklane
 ```
 
 ```bash tab="npm"
-npm install @brunobertolini/tln
+npm install tracklane
 ```
 
 ```bash tab="bun"
-bun add @brunobertolini/tln
+bun add tracklane
 ```
 
 ## Two entry points
@@ -31,9 +31,9 @@ you are in:
 
 | Import from | Where |
 | --- | --- |
-| `@brunobertolini/tln/browser` | In the browser. Loads each vendor's tag and calls its SDK. |
-| `@brunobertolini/tln/server` | On your server. Calls each vendor's conversion API. |
-| `@brunobertolini/tln` | Types only — for writing your own provider. |
+| `tracklane/browser` | In the browser. Loads each vendor's tag and calls its SDK. |
+| `tracklane/server` | On your server. Calls each vendor's conversion API. |
+| `tracklane` | Types only — for writing your own provider. |
 
 Importing the server entry point into client code would pull Node built-ins into your bundle,
 which is why they are separate.
@@ -52,7 +52,7 @@ Each provider page says exactly what its vendor expects on the page.
 ## Verify
 
 ```ts
-import { createTracking, ga4 } from '@brunobertolini/tln/browser';
+import { createTracking, ga4 } from 'tracklane/browser';
 
 const { track } = createTracking({
   providers: [ga4('G-XXXXXXX')],

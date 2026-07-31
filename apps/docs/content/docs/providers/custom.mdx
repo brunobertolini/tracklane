@@ -13,7 +13,7 @@ a courtesy: if the built-in ones needed something private, the contract would be
 ## Browser
 
 ```ts
-import type { BrowserProvider, EventData, TrackOptions } from '@brunobertolini/tln';
+import type { BrowserProvider, EventData, TrackOptions } from 'tracklane';
 
 export const acme = (siteId: string): BrowserProvider => ({
   name: 'acme',
@@ -38,7 +38,7 @@ LinkedIn and X, and it is the only honest reason to send nothing.
 ## Server
 
 ```ts
-import type { ServerProvider } from '@brunobertolini/tln';
+import type { ServerProvider } from 'tracklane';
 
 export const acme = (apiKey: string): ServerProvider => ({
   name: 'acme',

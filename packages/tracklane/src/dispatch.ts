@@ -19,7 +19,7 @@ export function assertUniqueProviders(providers: readonly { name: string }[]): v
   for (const provider of providers) {
     if (seen.has(provider.name)) {
       throw new Error(
-        `tln: provider "${provider.name}" is registered twice. One configuration per vendor.`,
+        `tracklane: provider "${provider.name}" is registered twice. One configuration per vendor.`,
       );
     }
     seen.add(provider.name);

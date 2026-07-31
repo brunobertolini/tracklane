@@ -194,23 +194,28 @@ tsup/ESLint/husky), `llms.txt` (from the template), CodeQL and OpenSSF Scorecard
 
 ## Open decisions (owner's call)
 
-1. **Final package name and scope.** Currently `@brunobertolini/tln`. Changing it is a
-   find/replace across `packages/tln/package.json`, `apps/docs/package.json`,
-   `.changeset/config.json`, README, docs MDX and `AGENTS.md`.
-2. **Custom domain for the docs.** With a domain of its own, `basePath` disappears — delete
+1. ~~**Final package name and scope.**~~ **Settled 2026-07-31: `tracklane`, unscoped.** Decision
+   3 above chose a scope only because `tln` was taken; `tracklane` is free, so the scope buys
+   nothing and costs every consumer a prefix. The `@tracklane` org is reserved for satellites —
+   a CMP preset, framework helpers — which is what a scope is actually for.
+2. ~~**The library's real description and API.**~~ Settled: the placeholders are gone.
+3. **Custom domain for the docs.** With a domain of its own, `basePath` disappears — delete
    the `env:` block from `docs.yml` and adjust `siteUrl` in `apps/docs/src/lib/shared.ts`.
-3. **First publish.** The trusted publisher is configured per package on npmjs.com and the
+4. **First publish.** The trusted publisher is configured per package on npmjs.com and the
    package must exist first. Sequence: manual publish of 0.1.0 → configure the trusted
    publisher pointing at `release.yml` → subsequent releases go out over OIDC.
-4. **The library's real description and API.** The `TODO` markers (package.json, README,
-   `content/docs/*.mdx`, `src/index.ts`) are deliberate placeholders.
 
 ## Runbook — what is left to do on GitHub
 
-- Create the `brunobertolini/tln` repo and push `develop` and `main`.
+- Create the `brunobertolini/tracklane` repo and push `develop` and `main`.
 - Settings → Pages → Source: **GitHub Actions**.
 - Settings → Security → enable **Private vulnerability reporting**.
 - Branch protection on `main`: require the `Quality`, `Test (Node 22)` and `Test (Node 24)`
   checks.
 - Install the **Renovate** app.
 - Enable Discussions (the issues `config.yml` points there).
+
+> **Note (2026-07-31):** the package was renamed from `@brunobertolini/tln` to `tracklane` and
+> the scope dropped. The body of this record keeps the original names on purpose — a decision
+> record says what was decided at the time, and the rename is recorded above rather than
+> rewritten into history.

@@ -1,5 +1,5 @@
 ---
-'@brunobertolini/tln': minor
+'tracklane': minor
 ---
 
 One interface between an application and every tool that receives user-behaviour events.

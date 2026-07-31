@@ -13,8 +13,8 @@ pnpm 10 — the pinned version lives in `packageManager`, so `corepack enable` i
 The library targets Node `>=22.14.0`; use Node 24 locally (`.nvmrc`), which is what
 `portless` requires.
 
-`pnpm dev` serves the docs at `https://tln-docs.localhost` instead of a port. Inside a
-git worktree the branch name is prepended (`https://feat-x.tln-docs.localhost`), so
+`pnpm dev` serves the docs at `https://tracklane-docs.localhost` instead of a port. Inside a
+git worktree the branch name is prepended (`https://feat-x.tracklane-docs.localhost`), so
 parallel worktrees never fight over a port. `dev:raw` skips portless if you need a
 plain `localhost:3000`.
 
@@ -22,7 +22,7 @@ plain `localhost:3000`.
 
 | Command             | What it does                                        |
 | ------------------- | --------------------------------------------------- |
-| `pnpm dev`          | Docs site at `https://tln-docs.localhost` (portless)  |
+| `pnpm dev`          | Docs site at `https://tracklane-docs.localhost` (portless)  |
 | `pnpm test`         | Unit tests and type tests (Vitest)                  |
 | `pnpm typecheck`    | `tsc --noEmit` in every workspace                   |
 | `pnpm lint:fix`     | Biome — lint, format and import sorting             |

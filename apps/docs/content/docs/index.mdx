@@ -7,11 +7,11 @@ Every analytics and advertising tool arrives with its own SDK, its own event nam
 own payload format. Add a second one and the tracking call at each conversion point stops
 being a line and becomes a block. Add a third and every one of those blocks has to change.
 
-`tln` gives your application **one interface**. You declare your destinations once, you name
+`tracklane` gives your application **one interface**. You declare your destinations once, you name
 what happened once, and the library translates and distributes.
 
 ```ts
-import { createTracking, ga4, meta } from '@brunobertolini/tln';
+import { createTracking, ga4, meta } from 'tracklane';
 
 const { track } = createTracking({
   providers: [ga4('G-XXXXXXX'), meta('123456789')],
@@ -43,7 +43,7 @@ with every request. The library mirrors that instead of pretending it away.
 
 ## What it is not
 
-This matters as much as what it is. `tln` **standardises and organises. It never changes
+This matters as much as what it is. `tracklane` **standardises and organises. It never changes
 behaviour.** The test applied to every decision is: *if you did not have the library, how would
 you write this by hand?* — and the library replicates exactly that.
 

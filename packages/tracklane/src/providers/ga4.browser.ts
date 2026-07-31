@@ -56,11 +56,11 @@ function push(...args: unknown[]): void {
  * @param measurementId - The `G-` id of the data stream, matching the tag on
  * the page.
  * @param config - Rarely needed event name overrides.
- * @returns A provider for `createTracking` from `@brunobertolini/tln/browser`.
+ * @returns A provider for `createTracking` from `tracklane/browser`.
  *
  * @example
  * ```ts
- * import { createTracking, ga4 } from '@brunobertolini/tln/browser';
+ * import { createTracking, ga4 } from 'tracklane/browser';
  *
  * // Google's own snippet is already in the page.
  * const { track } = createTracking({ providers: [ga4('G-XXXXXXX')] });

@@ -1,7 +1,7 @@
 ---
 paths:
-  - 'packages/tln/src/**/*.ts'
-  - 'packages/tln/*.config.ts'
+  - 'packages/tracklane/src/**/*.ts'
+  - 'packages/tracklane/*.config.ts'
 ---
 
 # Library source

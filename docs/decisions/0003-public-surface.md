@@ -40,7 +40,7 @@ lets the browser call go back to being almost exactly the sketch.
 ## The browser library
 
 ```ts
-import { createTracking, ga4, meta } from '@brunobertolini/tln/browser';
+import { createTracking, ga4, meta } from 'tracklane/browser';
 
 const { track, identify, consent } = createTracking({
   providers: [ga4('G-XXXXXXX'), meta('1234567890')],
@@ -83,7 +83,7 @@ where a host believes it is measuring.
 ## The server library
 
 ```ts
-import { createTracking, ga4, meta } from '@brunobertolini/tln/server';
+import { createTracking, ga4, meta } from 'tracklane/server';
 
 const { track } = createTracking({
   providers: [

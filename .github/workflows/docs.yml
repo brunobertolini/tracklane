@@ -30,7 +30,7 @@ jobs:
         # domain is configured (see docs/decisions/0001-monorepo-stack.md).
         env:
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
-        run: pnpm build --filter=@brunobertolini/tln-docs...
+        run: pnpm build --filter=tracklane-docs...
       - uses: actions/upload-pages-artifact@v5
         with:
           path: apps/docs/out

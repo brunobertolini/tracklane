@@ -1,8 +1,8 @@
-# tln
+# tracklane
 
-[![CI](https://github.com/brunobertolini/tln/actions/workflows/ci.yml/badge.svg)](https://github.com/brunobertolini/tln/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@brunobertolini/tln)](https://www.npmjs.com/package/@brunobertolini/tln)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/brunobertolini/tln/badge)](https://scorecard.dev/viewer/?uri=github.com/brunobertolini/tln)
+[![CI](https://github.com/brunobertolini/tracklane/actions/workflows/ci.yml/badge.svg)](https://github.com/brunobertolini/tracklane/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/tracklane)](https://www.npmjs.com/package/tracklane)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/brunobertolini/tracklane/badge)](https://scorecard.dev/viewer/?uri=github.com/brunobertolini/tracklane)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 > One interface between your application and every tool that receives events.
@@ -12,7 +12,7 @@ browser and through their server-side conversion APIs. Adding a tool is a line o
 instead of a diff across your whole application.
 
 ```ts
-import { createTracking, ga4 } from '@brunobertolini/tln/browser';
+import { createTracking, ga4 } from 'tracklane/browser';
 
 const { track } = createTracking({ providers: [ga4('G-XXXXXXX')] });
 
@@ -23,13 +23,13 @@ It standardises and organises, and it never changes behaviour: no consent decisi
 no retries, no opinion about what you should measure. Whatever a tool receives is what it would
 have received from a hand-written call.
 
-**Documentation:** https://brunobertolini.github.io/tln
+**Documentation:** https://brunobertolini.github.io/tracklane
 
 ## Repository layout
 
 | Path            | What it is                                              |
 | --------------- | ------------------------------------------------------- |
-| `packages/tln`  | The published library (`@brunobertolini/tln`), ESM-only |
+| `packages/tracklane`  | The published library (`tracklane`), ESM-only |
 | `apps/docs`     | Documentation site (Fumadocs, static export)            |
 | `docs/decisions`| Architecture Decision Records                            |
 
@@ -58,7 +58,7 @@ is left untouched on purpose — it records what was decided at the time.
 
 ```bash
 pnpm install
-pnpm dev          # docs site at https://tln-docs.localhost
+pnpm dev          # docs site at https://tracklane-docs.localhost
 pnpm test         # unit + type tests
 pnpm check        # everything CI runs
 ```
@@ -72,11 +72,11 @@ prefixed with the branch, so several worktrees run at the same time without coll
 
 | Where              | URL                                          |
 | ------------------ | -------------------------------------------- |
-| main checkout      | `https://tln-docs.localhost`                 |
-| worktree `feat/x`  | `https://feat-x.tln-docs.localhost`          |
+| main checkout      | `https://tracklane-docs.localhost`                 |
+| worktree `feat/x`  | `https://feat-x.tracklane-docs.localhost`          |
 
 No configuration: the name comes from the package name and the prefix from the branch.
-Use `pnpm --filter @brunobertolini/tln-docs dev:raw` to bypass portless and bind a plain port.
+Use `pnpm --filter tracklane-docs dev:raw` to bypass portless and bind a plain port.
 
 ## Contributing
 
