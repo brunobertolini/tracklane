@@ -5,7 +5,23 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/brunobertolini/tln/badge)](https://scorecard.dev/viewer/?uri=github.com/brunobertolini/tln)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-> TODO: one-line description of the library.
+> One interface between your application and every tool that receives events.
+
+Name an event once, in GA4's vocabulary, and it reaches every tool you configured — in the
+browser and through their server-side conversion APIs. Adding a tool is a line of configuration
+instead of a diff across your whole application.
+
+```ts
+import { createTracking, ga4 } from '@brunobertolini/tln/browser';
+
+const { track } = createTracking({ providers: [ga4('G-XXXXXXX')] });
+
+track('purchase', { transaction_id: 'T-1', value: 49.9, currency: 'BRL' });
+```
+
+It standardises and organises, and it never changes behaviour: no consent decisions, no queues,
+no retries, no opinion about what you should measure. Whatever a tool receives is what it would
+have received from a hand-written call.
 
 **Documentation:** https://brunobertolini.github.io/tln
 

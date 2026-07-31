@@ -1,10 +1,12 @@
-import { format } from '@brunobertolini/tln';
+import { createTracking } from '@brunobertolini/tln/server';
 import Link from 'next/link';
 import { appName, gitConfig } from '@/lib/shared';
 
 // Runs the published API at build time: if the library breaks, the docs
-// build breaks with it.
-const tagline = format('  TODO: one-line pitch for the library.  ');
+// build breaks with it. Zero providers means zero network calls.
+createTracking({ providers: [] });
+
+const tagline = 'One interface between your application and every tool that receives events.';
 
 export default function HomePage() {
   return (

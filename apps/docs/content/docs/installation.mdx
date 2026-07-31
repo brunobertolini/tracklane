@@ -23,10 +23,52 @@ npm install @brunobertolini/tln
 bun add @brunobertolini/tln
 ```
 
+## Two entry points
+
+The browser and the server are two libraries. They share no code and no state — only the
+vocabulary, which is what makes `purchase` mean the same thing on both sides. Import from the one
+you are in:
+
+| Import from | Where |
+| --- | --- |
+| `@brunobertolini/tln/browser` | In the browser. Loads each vendor's tag and calls its SDK. |
+| `@brunobertolini/tln/server` | On your server. Calls each vendor's conversion API. |
+| `@brunobertolini/tln` | Types only — for writing your own provider. |
+
+Importing the server entry point into client code would pull Node built-ins into your bundle,
+which is why they are separate.
+
+## Vendor tags go on the page
+
+This library **does not install vendor tags**. Each tag belongs on your page, put there the way
+its vendor documents — a snippet or a tag manager. We talk to the tag that is already there.
+
+That is deliberate: injecting a third-party script is a decision about your content-security
+policy and your page weight, and a vendor's own configuration command emits a page view, so
+issuing a second one would quietly double your traffic.
+
+Each provider page says exactly what its vendor expects on the page.
+
 ## Verify
 
 ```ts
-import { format } from '@brunobertolini/tln';
+import { createTracking, ga4 } from '@brunobertolini/tln/browser';
 
-console.log(format('  it works  '));
+const { track } = createTracking({
+  providers: [ga4('G-XXXXXXX')],
+  onError: console.error,
+});
+
+track('page_view');
 ```
+
+If a tag is missing, the call fails and reaches `onError` rather than disappearing.
+
+Open your browser's network tab and look for a request to `google-analytics.com/g/collect`. If it
+is there with a `204`, the tag is wired up.
+
+<Callout type="warn">
+  A `204` means Google received the request, not that the event will appear in a report. Google
+  answers `204` to payloads it discards — including anything sent from a headless browser, which
+  it treats as a bot. Confirm in the Realtime report, not in the network tab.
+</Callout>

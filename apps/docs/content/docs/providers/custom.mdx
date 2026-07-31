@@ -1,0 +1,70 @@
+---
+title: Writing a provider
+description: The contract, which is the same one the built-in providers use
+---
+
+Any tool that needs to receive events about what your users do can be a destination — not just ad
+pixels. If it has a notion of `track()`, you can write a provider for it, and you need nothing
+from this repository to do it: no registry entry, no allow-list, no release here.
+
+**The providers shipped with this library use no shortcut yours cannot use.** That is a rule, not
+a courtesy: if the built-in ones needed something private, the contract would be a lie.
+
+## Browser
+
+```ts
+import type { BrowserProvider, EventData, TrackOptions } from '@brunobertolini/tln';
+
+export const acme = (siteId: string): BrowserProvider => ({
+  name: 'acme',
+  default: 'passthrough',
+  install: () => loadAcmeTag(siteId),
+  track: (name: string, data: EventData, options: TrackOptions) => {
+    window.acme?.push(name, data, options.dedupId);
+  },
+});
+```
+
+`name` must be unique — registering the same vendor twice is a hard error, because there is
+nothing a second registration could say that the first cannot.
+
+`default` decides what happens to an event you have no mapping for. `passthrough` sends the
+canonical name as-is; `ignore` stays silent. Use `ignore` **only** when your vendor mints event
+identifiers in its own dashboard, so no name could possibly be guessed — that is the case for
+LinkedIn and X, and it is the only honest reason to send nothing.
+
+`install` runs once, when tracking is created. It may be async, and the core does not wait on it.
+
+## Server
+
+```ts
+import type { ServerProvider } from '@brunobertolini/tln';
+
+export const acme = (apiKey: string): ServerProvider => ({
+  name: 'acme',
+  default: 'passthrough',
+  track: async (name, data, context, report) => {
+    const response = await fetch('https://api.acme.com/events', { /* … */ });
+    if (!response.ok) throw new Error(`acme: ${response.status}`);
+    if (!context.user?.email) report('sent without an email; match rate will be low');
+  },
+});
+```
+
+Throw when the send failed — the dispatcher isolates it, reports it, and the other providers are
+unaffected. Use `report` for something the caller should know about a request that **already
+succeeded**; throwing there would tell a retry loop to resend a delivered conversion.
+
+## Three rules worth following
+
+**Map to nothing rather than to something invented.** If your vendor has no slot for a concept,
+send nothing. A made-up destination looks mapped and arrives nowhere, which is worse than an
+honest absence.
+
+**Never put payload contents in an error.** Events carry raw personal data by design. Report the
+status, the event name and the vendor — never the body.
+
+**Buffer for yourself if your SDK needs it.** Every vendor shipped here queues its own commands
+until its script loads, so the core holds no queue for anyone. If yours arrives through a promise
+or a React context, keep your own list and replay it — a `track` that returns silently because
+the client is not ready yet is a defect in the provider, not a gap in the core.

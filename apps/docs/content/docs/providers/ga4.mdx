@@ -1,0 +1,112 @@
+---
+title: Google Analytics 4
+description: What this library does with GA4, and what it deliberately does not
+---
+
+This page covers what is **ours**: what you configure, what we translate, and the traps that cost
+us a day to find. For what each GA4 parameter means, go to
+[Google's own reference](https://developers.google.com/analytics/devguides/collection/ga4/reference/events) —
+we do not restate it here, and we would only restate it wrong.
+
+## Browser
+
+**Put Google's tag on the page first**, the way
+[Google documents it](https://developers.google.com/analytics/devguides/collection/ga4/tag-options) —
+a snippet in your HTML or a tag manager. This library talks to the tag that is there; it does not
+inject scripts into your page and does not configure your property.
+
+```html
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('consent', 'default', { ad_storage: 'denied', analytics_storage: 'denied' });
+  gtag('config', 'G-XXXXXXX');
+</script>
+```
+
+```ts
+import { createTracking, ga4 } from '@brunobertolini/tln/browser';
+
+const { track, identify, consent } = createTracking({
+  providers: [ga4('G-XXXXXXX')],
+});
+```
+
+The measurement id must match the tag on the page. If the tag is missing, calls fail and are
+reported through `onError` — the same thing a hand-written `gtag(…)` would do, rather than a
+silent no-op that leaves you believing you are measuring.
+
+**The initial consent declaration goes in the snippet**, not here. Google requires it before the
+property is configured, and the configuration is yours. This library handles every declaration
+after that, through `consent()`.
+
+### Optional configuration
+
+```ts
+ga4('G-XXXXXXX', { events: { my_event: 'my_ga4_name' } });
+```
+
+Rarely needed: GA4's names *are* the canonical vocabulary, so events pass through unchanged.
+
+### What maps where
+
+| You call | GA4 receives |
+| --- | --- |
+| `track(name, data)` | `gtag('event', name, data)`, always addressed to your property |
+| `identify({ userId })` | `gtag('set', { user_id })` |
+| `identify(user, traits)` | `gtag('set', 'user_properties', traits)` |
+| `consent(command, state)` | `gtag('consent', command, state)`, verbatim |
+| `dedupId` | **nothing** |
+
+The consent vocabulary is Google's own spelling, so nothing is translated and no signal you did
+not declare can be invented on your behalf.
+
+`dedupId` maps nowhere because GA4 documents no browser-to-server deduplication. Inventing a
+parameter for it would imply a merge the platform never performs. Use `transaction_id` — which is
+business data — to control duplicate purchases.
+
+## Server
+
+```ts
+import { createTracking, ga4 } from '@brunobertolini/tln/server';
+
+const { track } = createTracking({
+  providers: [ga4({ measurementId: 'G-XXXXXXX', apiSecret: process.env.GA4_API_SECRET })],
+});
+
+await track('purchase', order, {
+  cookies: request.headers.get('cookie'),
+  user: { userId: order.userId },
+  timestamp: order.paidAt,
+});
+```
+
+**Pass the cookies.** GA4's server API needs both a visitor id and a session id, and both live in
+cookies its own browser tag has already set. The library reads them for you.
+
+Without the visitor cookie the library **refuses to send** and tells you why — there is no valid
+request to make, and the endpoint would have answered success anyway. Without the session cookie
+it sends and warns, because the event will be accepted and appear in no report.
+
+## The traps
+
+GA4 is unusual among the vendors here: **it fails by accepting.** A `204` means the request
+arrived, not that the event exists. Four different mistakes all look identical to success, and we
+hit three of them:
+
+- Sending from a **headless browser**. Google discards known bots by user agent, silently. If you
+  verify this integration in automation, override the user agent or you will be measuring nothing.
+- A **missing session cookie** on the server path. Accepted, then absent from every report.
+- **Person properties in the wrong shape** on the server path. The collection endpoint accepts
+  them; the [validation endpoint](https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events#validating_events)
+  rejects them. The library sends the shape that validates.
+
+The practical rule: to confirm anything about GA4, use the Realtime report. The network tab and
+the status code tell you almost nothing.
+
+## Not included
+
+Consent gating, queues, retries, and any decision about whether an event should be sent. See
+[what this library is not](/docs).

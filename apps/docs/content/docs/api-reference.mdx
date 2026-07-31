@@ -3,13 +3,71 @@ title: API reference
 description: Public API, generated from the library source
 ---
 
-The tables below are generated from the TSDoc comments in
-`packages/tln/src/index.ts` — they cannot drift from the code.
+Generated from the TSDoc in the library source — these tables cannot drift from the code.
 
-## `format(input, options?)`
+The browser and the server are **two libraries**. They share no runtime and no state: only the
+vocabulary below, which is what makes `purchase` mean the same thing on both sides.
 
-Formats an input string. Returns a `string`.
+## The vocabulary
 
-### `FormatOptions`
+### `EventData`
 
-<AutoTypeTable path="../../packages/tln/src/index.ts" name="FormatOptions" />
+What the business says happened, spelled the way GA4 spells it. The bag stays open — a business
+measures things this vocabulary does not name.
+
+<AutoTypeTable path="../../packages/tln/src/vocabulary.ts" name="EventData" />
+
+### `UserData`
+
+Who the person is. One identifier, translated into each vendor's own name. Values stay raw:
+hashing is a field format each vendor defines, applied inside its adapter.
+
+<AutoTypeTable path="../../packages/tln/src/vocabulary.ts" name="UserData" />
+
+### `ConsentState`
+
+Google's signals, adopted verbatim. Every other vendor receives a collapse of these — never an
+expansion. An absent signal produces no key.
+
+<AutoTypeTable path="../../packages/tln/src/vocabulary.ts" name="ConsentState" />
+
+### `TrackingError`
+
+The one diagnostic channel. It never carries event contents.
+
+<AutoTypeTable path="../../packages/tln/src/vocabulary.ts" name="TrackingError" />
+
+## Browser
+
+### `TrackOptions`
+
+The only thing the browser needs beyond the event itself.
+
+<AutoTypeTable path="../../packages/tln/src/browser.ts" name="TrackOptions" />
+
+### `BrowserTracking`
+
+<AutoTypeTable path="../../packages/tln/src/browser.ts" name="BrowserTracking" />
+
+### `BrowserProvider`
+
+The whole contract for a browser destination. Providers shipped here get no shortcut your own
+does not have.
+
+<AutoTypeTable path="../../packages/tln/src/browser.ts" name="BrowserProvider" />
+
+## Server
+
+### `EventContext`
+
+Who, when and where — everything a conversion API needs beyond the event itself.
+
+<AutoTypeTable path="../../packages/tln/src/server.ts" name="EventContext" />
+
+### `ServerTracking`
+
+<AutoTypeTable path="../../packages/tln/src/server.ts" name="ServerTracking" />
+
+### `ServerProvider`
+
+<AutoTypeTable path="../../packages/tln/src/server.ts" name="ServerProvider" />

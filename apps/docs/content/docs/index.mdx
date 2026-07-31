@@ -1,22 +1,75 @@
 ---
 title: Introduction
-description: What tln is and when to use it
+description: One interface between your application and every tool that receives events
 ---
 
-**TODO: replace this page with the real pitch.**
+Every analytics and advertising tool arrives with its own SDK, its own event names and its
+own payload format. Add a second one and the tracking call at each conversion point stops
+being a line and becomes a block. Add a third and every one of those blocks has to change.
 
-`tln` is an ESM-only TypeScript library published to npm as
-[`@brunobertolini/tln`](https://www.npmjs.com/package/@brunobertolini/tln).
-
-## Quick start
+`tln` gives your application **one interface**. You declare your destinations once, you name
+what happened once, and the library translates and distributes.
 
 ```ts
-import { format } from '@brunobertolini/tln';
+import { createTracking, ga4, meta } from '@brunobertolini/tln';
 
-format('  hello  ', { prefix: '> ' }); // '> hello'
+const { track } = createTracking({
+  providers: [ga4('G-XXXXXXX'), meta('123456789')],
+});
+
+track('purchase', {
+  transaction_id: 'T-1024',
+  value: 49.9,
+  currency: 'BRL',
+  items: [{ item_id: 'SKU-1', item_name: 'Notebook', price: 49.9, quantity: 1 }],
+});
 ```
+
+Adding a provider is a line in the configuration. Nothing at the call sites changes.
+
+## How it works
+
+You name events using **GA4's vocabulary**. That is the one opinion the library takes: a
+single language is required for a single interface to exist, and borrowing the most widespread
+one beats inventing a dictionary you would have to learn.
+
+Each provider receives the translation into its own terms — `purchase` becomes `Purchase` for
+Meta, stays `purchase` for GA4, and becomes whatever you mapped it to for the platforms that
+work by conversion ID. Those translations ship with the library.
+
+Browser and server are separate entry points, because the tools themselves work differently on
+each side: browser SDKs keep session state on their own, while conversion APIs expect user data
+with every request. The library mirrors that instead of pretending it away.
+
+## What it is not
+
+This matters as much as what it is. `tln` **standardises and organises. It never changes
+behaviour.** The test applied to every decision is: *if you did not have the library, how would
+you write this by hand?* — and the library replicates exactly that.
+
+So it is not:
+
+- **A consent platform.** It does not collect, store or display consent, and it does not decide
+  whether an event may be sent. It forwards the consent call you make, when you make it, to the
+  command each provider exposes — nothing more. Providers with no consent mechanism receive
+  nothing, because there is nothing to send them.
+- **A compliance layer.** It does not know what GDPR or LGPD are. Legal basis is your decision.
+- **A validator.** What may be sent is the sender's decision.
+- **A delivery guarantee.** There is no queue, no retry and no buffer. Delivery is the
+  provider's job, exactly as it is when you integrate directly. Emission is fire-and-forget and
+  silent, and one provider failing does not affect the others.
+- **An analytics SDK.** It collects nothing on its own and has no opinion on what you measure.
+
+## Providers
+
+Five ship with v1: **GA4**, **Meta**, **LinkedIn**, **PostHog** and **X**.
+
+A provider is any tool that needs to receive events about what the user does in your system —
+not just ad pixels. If it has a notion of `track()`, it can be a destination, and writing your
+own uses the same public contract the official ones use. Nothing is reserved.
 
 <Cards>
   <Card title="Installation" href="/docs/installation" />
+  <Card title="Comparison" href="/docs/comparison" />
   <Card title="API reference" href="/docs/api-reference" />
 </Cards>
