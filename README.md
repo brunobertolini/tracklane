@@ -17,6 +17,27 @@
 | `apps/docs`     | Documentation site (Fumadocs, static export)            |
 | `docs/decisions`| Architecture Decision Records                            |
 
+## First-time setup
+
+The repository ships with placeholder names. To claim it:
+
+```bash
+pnpm setup
+```
+
+It asks for the npm package name, GitHub owner/repo, author and docs domain, then
+rewrites every place they appear — manifests, docs site, workflows, changesets config,
+CODEOWNERS, FUNDING, README — renames `packages/<name>`, and writes a `CNAME` (or keeps
+the GitHub Pages base path) depending on your answer about the domain.
+
+```bash
+pnpm setup -- --dry-run                        # preview, writes nothing
+pnpm setup -- --name @scope/x --owner me --yes # non-interactive
+```
+
+It is safe to run again later to rename the project. The ADR under `docs/decisions/`
+is left untouched on purpose — it records what was decided at the time.
+
 ## Development
 
 ```bash
