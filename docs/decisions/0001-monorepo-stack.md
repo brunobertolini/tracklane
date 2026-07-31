@@ -1,213 +1,216 @@
-# ADR-0001 — Stack do monorepo: lib TypeScript OSS + docs estática com Fumadocs
+# ADR-0001 — Monorepo stack: OSS TypeScript library + static docs with Fumadocs
 
-- **Status:** aceito
-- **Data:** 2026-07-30
-- **Contexto de decisão:** triangulação entre três modelos (Fable, GPT-5.5 via Codex, Grok),
-  com verificação empírica das versões e do comportamento real das ferramentas neste repo.
+- **Status:** accepted
+- **Date:** 2026-07-30
+- **Decision context:** triangulation between three models (Fable, GPT-5.5 via Codex, Grok),
+  with empirical verification of versions and of how the tools actually behave in this repo.
 
-## Contexto
+## Context
 
-Repositório greenfield. Objetivo: um monorepo que siga a convenção dominante de meados de 2026
-para uma biblioteca TypeScript open-source séria, mais um site de documentação **estático**
-construído com **Fumadocs** (requisito fixo). Nada além disso — sem backend, sem banco, sem
-features de IA.
+Greenfield repository. Goal: a monorepo following the dominant mid-2026 convention for a
+serious open-source TypeScript library, plus a **static** documentation site built with
+**Fumadocs** (fixed requirement). Nothing beyond that — no backend, no database, no AI
+features.
 
-O que é fixo por decisão do dono: licença **MIT**, deploy das docs no **GitHub Pages**,
-biblioteca com **API placeholder** (o domínio será preenchido depois).
+Fixed by the owner's decision: **MIT** licence, docs deployed to **GitHub Pages**, library
+with a **placeholder API** (the domain to be filled in later).
 
-## Resumo das decisões
+## Decision summary
 
-| # | Tema | Decisão | Alternativa mais forte rejeitada |
-|---|------|---------|----------------------------------|
+| # | Topic | Decision | Strongest rejected alternative |
+|---|-------|----------|--------------------------------|
 | 1 | Package manager | pnpm 10 + `workspace:` + `catalog:` | bun |
-| 2 | Orquestrador | Turborepo (config mínima) | scripts pnpm puros |
-| 3 | Layout | `packages/tln` + `apps/docs`, pacote com escopo | `packages/*` flat, nome sem escopo |
-| 4 | Build da lib | tsdown (Rolldown), **ESM-only** | tsup; dual CJS+ESM |
-| 5 | TypeScript | `tsconfig.base.json` na raiz, sem project references | pacote `@repo/typescript-config` |
-| 6 | Testes | Vitest + coverage v8 + `expectTypeOf` | `node:test` |
-| 7 | Lint/format | Biome 2.5 (ferramenta única) | ESLint 9 flat + Prettier |
+| 2 | Task runner | Turborepo (minimal config) | plain pnpm scripts |
+| 3 | Layout | `packages/tln` + `apps/docs`, scoped package | flat `packages/*`, unscoped name |
+| 4 | Library build | tsdown (Rolldown), **ESM-only** | tsup; dual CJS+ESM |
+| 5 | TypeScript | `tsconfig.base.json` at the root, no project references | `@repo/typescript-config` package |
+| 6 | Tests | Vitest + coverage v8 + `expectTypeOf` | `node:test` |
+| 7 | Lint/format | Biome 2.5 (single tool) | ESLint 9 flat + Prettier |
 | 8 | Release | Changesets + npm trusted publishing (OIDC) | semantic-release / release-please |
 | 9 | CI | GitHub Actions: ci, docs, release, codeql, scorecard + Renovate | Dependabot |
 | 10 | Docs | Fumadocs 16 + Next 16, `output: 'export'`, Orama static, `fumadocs-typescript` | Pagefind / Algolia / typedoc |
-| 11 | Deploy docs | GitHub Pages com `basePath` | Vercel / Cloudflare Pages |
-| 12 | Higiene OSS | MIT, Contributor Covenant, SECURITY, templates, **sem git hooks** | husky + commitlint |
+| 11 | Docs deploy | GitHub Pages with `basePath` | Vercel / Cloudflare Pages |
+| 12 | OSS hygiene | MIT, Contributor Covenant, SECURITY, templates, **no git hooks** | husky + commitlint |
 | 13 | Extras | knip, AGENTS.md, llms.txt, CodeQL, Scorecard | — |
 
-## Decisões
+## Decisions
 
-### 1. pnpm 10 com catalog
+### 1. pnpm 10 with catalog
 
-`packageManager` pinado (`pnpm@10.26.2`), `engines.node: ">=22.14.0"`, `.nvmrc` = 24.
-Versões compartilhadas entre workspaces (`typescript`, `@types/node`) vivem no `catalog:`
-do `pnpm-workspace.yaml` — uma única fonte de verdade, reescrita no publish.
+`packageManager` pinned (`pnpm@10.26.2`), `engines.node: ">=22.14.0"`, `.nvmrc` at 24.
+Versions shared across workspaces (`typescript`, `@types/node`) live in the `catalog:` of
+`pnpm-workspace.yaml` — a single source of truth, rewritten on publish.
 
-**Rejeitado — bun:** instalação mais rápida, mas todo o caminho de publicação OSS
-(Changesets, OIDC, provenance) é construído sobre npm/pnpm.
+**Rejected — bun:** faster installs, but the entire OSS publishing path (Changesets, OIDC,
+provenance) is built on npm/pnpm.
 
-**Nota:** ficar em pnpm 10.x. Há relato de o publish via OIDC quebrar no pnpm 11.
+**Note:** stay on pnpm 10.x. There are reports of OIDC publishing breaking on pnpm 11.
 
 ### 2. Turborepo
 
-Foi a única divergência real entre os três consultores (2 a favor, 1 contra). O argumento
-contrário é bom: com 1 lib + 1 site, o cache quase nunca acerta, porque o docs rebuilda
-sempre que a lib muda. O argumento decisivo a favor: `dependsOn: ["^build"]` dá ordem
-topológica declarada em vez de ordem implícita em scripts, é o que um contribuidor espera
-encontrar num monorepo TS, e o custo é um arquivo de 30 linhas.
+The only real disagreement between the three consultants (2 in favour, 1 against). The
+argument against is a good one: with 1 library and 1 site, the cache almost never hits,
+because docs rebuild whenever the library changes. The decisive argument in favour:
+`dependsOn: ["^build"]` gives declared topological ordering instead of ordering implicit in
+scripts, it is what a contributor expects to find in a TS monorepo, and the cost is a 30-line
+file.
 
-**Rejeitado — scripts pnpm puros:** funcionam hoje, viram `&&` encadeado assim que o repo
-crescer. **Rejeitado — Nx/moon:** superfície grande demais para dois workspaces.
+**Rejected — plain pnpm scripts:** they work today, they become chained `&&` as soon as the
+repo grows. **Rejected — Nx/moon:** too much surface for two workspaces.
 
-### 3. Layout e naming
+### 3. Layout and naming
 
-`packages/*` publica, `apps/*` deploya. O pacote leva escopo: escopo garante namespace e
-elimina disputa por nome.
+`packages/*` publishes, `apps/*` deploys. The package is scoped: a scope guarantees a
+namespace and removes any fight over the name.
 
-**Verificado:** `tln` sem escopo já está ocupado no npm (versão 1.0.3 de terceiros) — nome
-sem escopo não era opção. O nome atual `@brunobertolini/tln` é **provisório**
-(ver "Decisões em aberto").
+**Verified:** unscoped `tln` is already taken on npm (a third-party 1.0.3) — an unscoped name
+was never an option. The current name `@brunobertolini/tln` is **provisional** (see "Open
+decisions").
 
 ### 4. tsdown, ESM-only
 
-tsdown é o sucessor mantido do tsup, sobre Rolldown 1.x. Formato **ESM-only**: dual
-CJS+ESM em 2026 é custo puro (dois grafos de output, dois conjuntos de tipos, toda a
-superfície de bugs de types masquerading).
+tsdown is the maintained successor to tsup, built on Rolldown 1.x. Format is **ESM-only**:
+dual CJS+ESM in 2026 is pure cost — two output graphs, two sets of types, and the whole bug
+surface of types masquerading.
 
-Contrato do pacote: `"type": "module"`, `sideEffects: false`, `files: ["dist"]`,
-`exports` com `"types"` como **primeira** condição, sourcemaps publicados.
+Package contract: `"type": "module"`, `sideEffects: false`, `files: ["dist"]`, `exports` with
+`"types"` as the **first** condition, sourcemaps published.
 
-**Gate de CI:** `publint --strict` + `attw --pack . --profile esm-only`, rodando sobre o
-**tarball real** (`pnpm pack`), não sobre o diretório. O perfil `esm-only` é o que declara
-que resolução a partir de CJS não é suportada — sem ele o attw falha por design.
+**CI gate:** `publint --strict` + `attw --pack . --profile esm-only`, running against the
+**real tarball** (`pnpm pack`), not the directory. The `esm-only` profile is what declares
+that resolution from CJS is unsupported — without it, attw fails by design.
 
 ### 5. TypeScript
 
-`tsconfig.base.json` na raiz, cada workspace estende. **Sem** pacote `@repo/typescript-config`:
-essa convenção existe para monorepos com muitos consumidores; com dois, é indireção.
-Sem project references — tsdown builda a lib, Next builda as docs.
+`tsconfig.base.json` at the root, each workspace extends it. **No** `@repo/typescript-config`
+package: that convention exists for monorepos with many consumers; with two, it is
+indirection. No project references — tsdown builds the library, Next builds the docs.
 
 Flags: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
-`verbatimModuleSyntax`, `isolatedDeclarations` (na lib), `target: es2023`,
-`moduleResolution: bundler` (validado do lado do consumidor pelo `attw`).
+`verbatimModuleSyntax`, `isolatedDeclarations` (in the library), `target: es2023`,
+`moduleResolution: bundler` (validated from the consumer side by `attw`).
 
-**Verificado empiricamente, dois ajustes necessários:**
+**Verified empirically, two adjustments required:**
 
-1. `isolatedDeclarations` quebra em arquivos de config (`tsdown.config.ts`,
-   `vitest.config.ts`) porque não infere default export — resolvido com anotação de tipo
-   explícita, não desligando a flag.
-2. `exactOptionalPropertyTypes` fica **desligado em `apps/docs`**: props de React/Fumadocs
-   não são escritas contra essa flag. Ela permanece ligada na lib publicada, onde a API é nossa.
+1. `isolatedDeclarations` breaks in config files (`tsdown.config.ts`, `vitest.config.ts`)
+   because it cannot infer the default export — solved with an explicit type annotation, not
+   by turning the flag off.
+2. `exactOptionalPropertyTypes` is **off in `apps/docs`**: React/Fumadocs props are not
+   written against that flag. It stays on in the published library, where the API is ours.
 
-**Versão do TypeScript: 6.x, não 7.x.** O TS 7 (port em Go) já é `latest` no npm, mas o
-próprio template oficial do Fumadocs ainda pina `^6.0.3`, e `fumadocs-typescript` depende de
-`ts-morph`. Migrar quando o ecossistema de docs declarar suporte.
+**TypeScript version: 6.x, not 7.x.** TS 7 (the Go port) is already `latest` on npm, but
+Fumadocs' own official template still pins `^6.0.3`, and `fumadocs-typescript` depends on
+`ts-morph`. Migrate when the docs ecosystem declares support.
 
 ### 6. Vitest
 
-Testes co-localizados (`src/**/*.test.ts`), testes de tipo em `*.test-d.ts` com
-`expectTypeOf` e `typecheck` habilitado — sem dependência extra (nada de tsd/expect-type).
-Coverage v8 com threshold de 80% apenas na lib; o site de docs não tem threshold.
+Co-located tests (`src/**/*.test.ts`), type tests in `*.test-d.ts` with `expectTypeOf` and
+`typecheck` enabled — no extra dependency (no tsd, no expect-type). Coverage v8 with an 80%
+threshold on the library only; the docs site has no threshold.
 
 ### 7. Biome
 
-Uma ferramenta para lint, format e ordenação de imports. Config única na raiz, com override
-de domínios `next`/`react` para `apps/docs`.
+One tool for linting, formatting and import ordering. Single config at the root, with a
+`next`/`react` domain override for `apps/docs`.
 
-**Rejeitado — ESLint 9 + Prettier:** duas ferramentas, duas configs, CI mais lento, para
-cobertura equivalente num repo sem plugins custom. O custo para contribuidores habituados a
-ESLint é real, e está mitigado documentando `pnpm lint:fix` no CONTRIBUTING.
+**Rejected — ESLint 9 + Prettier:** two tools, two configs, slower CI, for equivalent coverage
+in a repo with no custom plugins. The cost for contributors used to ESLint is real, and is
+mitigated by documenting `pnpm lint:fix` in CONTRIBUTING.
 
-**Armadilha verificada:** `biome.json` **não aceita comentários**. Um comentário no arquivo
-faz o Biome cair silenciosamente para os defaults — o sintoma é `biome ci` varrendo
-`.next/` e `out/` e reportando dezenas de milhares de erros. Se precisar comentar,
-renomeie para `biome.jsonc`.
+**Verified pitfall:** `biome.json` **does not accept comments**. A comment in the file makes
+Biome silently fall back to defaults — the symptom is `biome ci` sweeping `.next/` and `out/`
+and reporting tens of thousands of errors. If a comment is needed, rename to `biome.jsonc`.
 
 ### 8. Changesets + trusted publishing
 
-O bump semver e a nota de changelog são declarados no PR (`pnpm changeset`), revisáveis no
-diff — o que é o correto para uma lib, onde a intenção de quebra não se infere de mensagem
-de commit.
+The semver bump and the changelog note are declared in the PR (`pnpm changeset`) and
+reviewable in the diff — which is the right model for a library, where breaking intent cannot
+be inferred from a commit message.
 
-Publicação por **OIDC (trusted publishing)**, sem token de longa duração no repo; a
-provenance é gerada automaticamente. **JSR: não** — npm é a fonte de verdade; adicionar um
-segundo registro por audiência hipotética é custo sem retorno.
+Publishing via **OIDC (trusted publishing)**, with no long-lived token in the repo; provenance
+is generated automatically. **JSR: no** — npm is the source of truth; adding a second registry
+for a hypothetical audience is cost without return.
 
 ### 9. CI
 
-Cinco workflows: `ci` (quality + matrix de testes Node 22/24), `docs` (build estático +
-deploy no Pages), `release` (Changesets + OIDC), `codeql`, `scorecard`.
+Five workflows: `ci` (quality + Node 22/24 test matrix), `docs` (static build + Pages deploy),
+`release` (Changesets + OIDC), `codeql`, `scorecard`.
 
-**Verificado direto nas tags dos repositórios** (não pela memória do modelo, que errou aqui):
-`actions/checkout@v7`, `actions/setup-node@v7`, `pnpm/action-setup@v6`,
+**Verified directly against the repositories' tags** (not from model memory, which was wrong
+here): `actions/checkout@v7`, `actions/setup-node@v7`, `pnpm/action-setup@v6`,
 `actions/configure-pages@v6`, `actions/upload-pages-artifact@v5`, `actions/deploy-pages@v5`,
 `changesets/action@v1`, `github/codeql-action@v4`, `ossf/scorecard-action@v2`.
 
-Os workflows referenciam majors; o Renovate está configurado com
-`helpers:pinGitHubActionDigests` e converte para SHA no primeiro PR — que é o requisito do
-Scorecard, sem exigir que os SHAs sejam escritos à mão agora.
+The workflows reference majors; Renovate is configured with
+`helpers:pinGitHubActionDigests` and converts them to SHAs in the first PR — which is what
+Scorecard requires, without demanding the SHAs be written by hand now.
 
 ### 10. Fumadocs
 
-Gerado pelo template oficial `+next+fuma-docs-mdx+static` (Fumadocs 16.14 / Next 16.2 /
-React 19.2 / Tailwind 4). O template já entrega o que importa para export estático:
-busca **Orama static** (índice em arquivo, resolvido no browser), `llms.txt` e OG images
-geradas em build.
+Generated from the official `+next+fuma-docs-mdx+static` template (Fumadocs 16.14 / Next 16.2
+/ React 19.2 / Tailwind 4). The template already ships what matters for static export:
+**Orama static** search (index in a file, resolved in the browser), `llms.txt`, and OG images
+generated at build time.
 
-API reference via `fumadocs-typescript` + `AutoTypeTable`, lendo o **source** da lib
-(`packages/tln/src/index.ts`) — a tabela de tipos é gerada do TSDoc e não pode divergir do
-código. **Rejeitado — typedoc-plugin-markdown:** gera centenas de páginas ortogonais ao
-design do site.
+API reference via `fumadocs-typescript` + `AutoTypeTable`, reading the library's **source**
+(`packages/tln/src/index.ts`) — the type table is generated from TSDoc and cannot drift from
+the code. **Rejected — typedoc-plugin-markdown:** generates hundreds of pages orthogonal to
+the site's design.
 
-Docs versionadas: **não** por enquanto. i18n: fora de escopo.
+Versioned docs: **not** for now. i18n: out of scope.
 
-A home importa `format()` da lib de verdade: se a lib quebrar, o build das docs quebra junto.
+The home page imports the real published API from the library: if the library breaks, the docs
+build breaks with it.
 
 ### 11. GitHub Pages
 
-Site 100% estático não usa nada que um host de arquivos não sirva, e mantém código, CI,
-releases e docs no mesmo provedor, sem conta extra.
+A fully static site uses nothing a file host cannot serve, and keeps code, CI, releases and
+docs with the same provider, with no extra account.
 
-**Armadilha do `basePath`, tratada:** project pages servem em `/<repo>`. O `next.config.mjs`
-lê `NEXT_PUBLIC_BASE_PATH` (setado pelo workflow como `/tln`); `trailingSlash: true` e
-`images.unoptimized`. O índice de busca é um arquivo buscado em runtime que o Next **não**
-reescreve — por isso `staticClient({ from: \`${basePath}/api/search\` })` em
-`src/components/search.tsx`. Esse é o bug clássico "busca funciona local, quebra em produção".
+**The `basePath` pitfall, handled:** project pages are served under `/<repo>`.
+`next.config.mjs` reads `NEXT_PUBLIC_BASE_PATH` (set by the workflow to `/tln`);
+`trailingSlash: true` and `images.unoptimized`. The search index is a file fetched at runtime
+that Next does **not** rewrite — hence
+``staticClient({ from: `${basePath}/api/search` })`` in `src/components/search.tsx`. This is
+the classic "search works locally, breaks in production" bug.
 
-**Verificado:** build com `NEXT_PUBLIC_BASE_PATH=/tln` gera `out/api/search` (~22 KB) e os
-assets sob `/tln/_next/…`.
+**Verified:** building with `NEXT_PUBLIC_BASE_PATH=/tln` produces `out/api/search` (~22 KB)
+and assets under `/tln/_next/…`.
 
-### 12. Higiene OSS
+### 12. OSS hygiene
 
 MIT, Contributor Covenant 3.0, CONTRIBUTING, SECURITY (via GitHub Private Vulnerability
-Reporting, não e-mail), issue forms em YAML, PR template, CODEOWNERS, `.editorconfig`,
-FUNDING, AGENTS.md.
+Reporting, not email), YAML issue forms, PR template, CODEOWNERS, `.editorconfig`, FUNDING,
+AGENTS.md.
 
-**Sem git hooks, sem commitlint.** O release não depende de mensagem de commit (Changesets),
-então enforcement de commit é processo sem consumidor; lint e format são gates de CI. Hook
-local só adiciona fricção para quem contribui de fora.
+**No git hooks, no commitlint.** Releases do not depend on commit messages (Changesets), so
+commit enforcement is process without a consumer; lint and format are CI gates. A local hook
+only adds friction for outside contributors.
 
 ### 13. Extras
 
-`knip` no CI (arquivos, deps e exports mortos), `AGENTS.md` (evita que agentes reintroduzam
-tsup/ESLint/husky), `llms.txt` (vem do template), CodeQL e OpenSSF Scorecard.
+`knip` in CI (dead files, deps and exports), `AGENTS.md` (keeps agents from reintroducing
+tsup/ESLint/husky), `llms.txt` (from the template), CodeQL and OpenSSF Scorecard.
 
-## Decisões em aberto (pendem do dono)
+## Open decisions (owner's call)
 
-1. **Nome e escopo definitivos do pacote.** Hoje `@brunobertolini/tln`. Trocar é um
-   find/replace em: `packages/tln/package.json`, `apps/docs/package.json`,
-   `.changeset/config.json`, README, docs MDX e `AGENTS.md`.
-2. **Domínio custom para as docs.** Com domínio próprio, `basePath` desaparece — apague o
-   `env:` do `docs.yml` e ajuste `siteUrl` em `apps/docs/src/lib/shared.ts`.
-3. **Primeiro publish.** O trusted publisher é configurado por pacote no npmjs.com e o
-   pacote precisa existir antes. Sequência: publish manual da 0.1.0 → configurar o trusted
-   publisher apontando para `release.yml` → releases seguintes saem por OIDC.
-4. **Descrição e API reais da lib.** Os pontos marcados `TODO` (package.json, README,
-   `content/docs/*.mdx`, `src/index.ts`) são placeholder deliberado.
+1. **Final package name and scope.** Currently `@brunobertolini/tln`. Changing it is a
+   find/replace across `packages/tln/package.json`, `apps/docs/package.json`,
+   `.changeset/config.json`, README, docs MDX and `AGENTS.md`.
+2. **Custom domain for the docs.** With a domain of its own, `basePath` disappears — delete
+   the `env:` block from `docs.yml` and adjust `siteUrl` in `apps/docs/src/lib/shared.ts`.
+3. **First publish.** The trusted publisher is configured per package on npmjs.com and the
+   package must exist first. Sequence: manual publish of 0.1.0 → configure the trusted
+   publisher pointing at `release.yml` → subsequent releases go out over OIDC.
+4. **The library's real description and API.** The `TODO` markers (package.json, README,
+   `content/docs/*.mdx`, `src/index.ts`) are deliberate placeholders.
 
-## Runbook — o que falta fazer no GitHub
+## Runbook — what is left to do on GitHub
 
-- Criar o repo `brunobertolini/tln` e dar push de `develop` e `main`.
+- Create the `brunobertolini/tln` repo and push `develop` and `main`.
 - Settings → Pages → Source: **GitHub Actions**.
-- Settings → Security → habilitar **Private vulnerability reporting**.
-- Branch protection em `main`: exigir os checks `Quality`, `Test (Node 22)`, `Test (Node 24)`.
-- Instalar o app do **Renovate**.
-- Habilitar Discussions (o `config.yml` dos issues aponta para lá).
+- Settings → Security → enable **Private vulnerability reporting**.
+- Branch protection on `main`: require the `Quality`, `Test (Node 22)` and `Test (Node 24)`
+  checks.
+- Install the **Renovate** app.
+- Enable Discussions (the issues `config.yml` points there).
