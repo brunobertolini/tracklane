@@ -139,7 +139,13 @@ Five workflows: `ci` (quality + Node 22/24 test matrix), `docs` (static build + 
 **Verified directly against the repositories' tags** (not from model memory, which was wrong
 here): `actions/checkout@v7`, `actions/setup-node@v7`, `pnpm/action-setup@v6`,
 `actions/configure-pages@v6`, `actions/upload-pages-artifact@v5`, `actions/deploy-pages@v5`,
-`changesets/action@v1`, `github/codeql-action@v4`, `ossf/scorecard-action@v2`.
+`changesets/action@v1`, `github/codeql-action@v4`, `ossf/scorecard-action@v2.4.4`.
+
+> **Correction (2026-07-31), and it undercuts the sentence above.** `ossf/scorecard-action@v2`
+> does not exist — that repository publishes only patch tags (`v2.4.4` and earlier), so the
+> workflow failed on its first run with "unable to find version". The claim of having verified
+> these against the repositories' tags did not hold for this one, which is worth recording
+> precisely because the paragraph was written to assert the opposite.
 
 The workflows reference majors; Renovate is configured with
 `helpers:pinGitHubActionDigests` and converts them to SHAs in the first PR — which is what
