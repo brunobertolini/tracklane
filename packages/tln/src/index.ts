@@ -1,40 +1,52 @@
 /**
- * Options accepted by {@link format}.
+ * Types only — the vocabulary shared by both libraries, plus the two
+ * provider contracts.
  *
- * TODO: replace this placeholder API with the real public surface.
- */
-export interface FormatOptions {
-  /**
-   * String prepended to the result.
-   *
-   * @defaultValue `''`
-   */
-  prefix?: string;
-  /**
-   * Remove surrounding whitespace from the input before formatting.
-   *
-   * @defaultValue `true`
-   */
-  trim?: boolean;
-}
-
-/**
- * Formats an input string according to {@link FormatOptions}.
+ * The runtime lives behind `@brunobertolini/tln/browser` and
+ * `@brunobertolini/tln/server`. They are separate entry points because they
+ * are separate libraries: no shared runtime, no shared state, nothing in
+ * common but the vocabulary below. Importing one never pulls in the other.
  *
- * @param input - Value to format.
- * @param options - Formatting options.
- * @returns The formatted string.
+ * A provider written outside this package imports from here and needs
+ * nothing else.
  *
  * @example
  * ```ts
- * import { format } from '@brunobertolini/tln';
+ * import type { BrowserProvider, EventData, TrackOptions } from '@brunobertolini/tln';
  *
- * format('  hello  ', { prefix: '> ' }); // '> hello'
+ * export const tiktok = (pixelId: string): BrowserProvider => ({
+ *   name: 'tiktok',
+ *   default: 'passthrough',
+ *   install: () => loadTikTokPixel(pixelId),
+ *   track: (name: string, data: EventData, options: TrackOptions) => {
+ *     window.ttq?.track(name, data, { event_id: options.dedupId });
+ *   },
+ * });
  * ```
+ *
+ * @packageDocumentation
  */
-export function format(input: string, options: FormatOptions = {}): string {
-  const { prefix = '', trim = true } = options;
-  const value = trim ? input.trim() : input;
 
-  return `${prefix}${value}`;
-}
+export type {
+  BrowserProvider,
+  BrowserTracking,
+  BrowserTrackingOptions,
+  TrackOptions,
+} from './browser.js';
+export type {
+  EventContext,
+  ResolvedContext,
+  ServerProvider,
+  ServerTracking,
+  ServerTrackingOptions,
+} from './server.js';
+export type {
+  ActionSource,
+  ConsentState,
+  EventBinding,
+  EventData,
+  EventItem,
+  ProviderDefault,
+  TrackingError,
+  UserData,
+} from './vocabulary.js';

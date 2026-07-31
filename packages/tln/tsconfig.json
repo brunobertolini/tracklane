@@ -3,6 +3,11 @@
   "compilerOptions": {
     "isolatedDeclarations": true,
     "noEmit": true,
+    // The browser library talks to `window` and `document`. Only the
+    // type-checker needs these: the published bundle stays platform-neutral,
+    // and the two entry points are what keep browser and Node code apart at
+    // runtime.
+    "lib": ["es2023", "dom"],
     "types": ["node"]
   },
   "include": ["src/**/*.ts", "*.config.ts"]
