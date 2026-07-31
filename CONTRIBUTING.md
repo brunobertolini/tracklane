@@ -9,14 +9,20 @@ as pull requests.
 pnpm install
 ```
 
-Node.js `>=22.14.0`, pnpm 10. The pinned version lives in `packageManager`, so
-`corepack enable` is enough.
+pnpm 10 — the pinned version lives in `packageManager`, so `corepack enable` is enough.
+The library targets Node `>=22.14.0`; use Node 24 locally (`.nvmrc`), which is what
+`portless` requires.
+
+`pnpm dev` serves the docs at `https://tln-docs.localhost` instead of a port. Inside a
+git worktree the branch name is prepended (`https://feat-x.tln-docs.localhost`), so
+parallel worktrees never fight over a port. `dev:raw` skips portless if you need a
+plain `localhost:3000`.
 
 ## Everyday commands
 
 | Command             | What it does                                        |
 | ------------------- | --------------------------------------------------- |
-| `pnpm dev`          | Runs the docs site against the local library source |
+| `pnpm dev`          | Docs site at `https://tln-docs.localhost` (portless)  |
 | `pnpm test`         | Unit tests and type tests (Vitest)                  |
 | `pnpm typecheck`    | `tsc --noEmit` in every workspace                   |
 | `pnpm lint:fix`     | Biome — lint, format and import sorting             |

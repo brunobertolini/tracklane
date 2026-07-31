@@ -42,12 +42,25 @@ is left untouched on purpose — it records what was decided at the time.
 
 ```bash
 pnpm install
-pnpm dev          # docs site at http://localhost:3000
+pnpm dev          # docs site at https://tln-docs.localhost
 pnpm test         # unit + type tests
 pnpm check        # everything CI runs
 ```
 
-Requires Node.js `>=22.14.0` and pnpm 10 (`corepack enable` or a global install).
+Requires pnpm 10 (`corepack enable` or a global install). The library targets Node
+`>=22.14.0`; local development uses Node 24 (see `.nvmrc`) because `portless` requires it.
+
+`pnpm dev` runs the docs server through [portless](https://www.npmjs.com/package/portless),
+which gives it a stable HTTPS name instead of a port. In a git worktree the name is
+prefixed with the branch, so several worktrees run at the same time without colliding:
+
+| Where              | URL                                          |
+| ------------------ | -------------------------------------------- |
+| main checkout      | `https://tln-docs.localhost`                 |
+| worktree `feat/x`  | `https://feat-x.tln-docs.localhost`          |
+
+No configuration: the name comes from the package name and the prefix from the branch.
+Use `pnpm --filter @brunobertolini/tln-docs dev:raw` to bypass portless and bind a plain port.
 
 ## Contributing
 

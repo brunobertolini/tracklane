@@ -85,7 +85,7 @@ async function main() {
   for (const file of files) {
     const original = await readFile(file, 'utf8');
     let next = original;
-    for (const [from, to] of replacements) next = next.split(from).join(to);
+    for (const replacement of replacements) next = applyReplacement(next, replacement);
     if (next === original) continue;
     changed.push(relative(ROOT, file));
     if (!DRY_RUN) await writeFile(file, next);
@@ -196,7 +196,7 @@ async function ask(current) {
 
   rl?.close();
 
-  const bare = pkgName.includes('/') ? pkgName.split('/')[1] : pkgName;
+  const bare = bareName(pkgName);
   const scope = pkgName.includes('/') ? `${pkgName.split('/')[0]}/` : '';
 
   return {
@@ -225,6 +225,8 @@ function buildReplacements(current, answers) {
     [current.siteUrl, answers.siteUrl],
     [`${current.owner}/${current.repo}`, `${answers.owner}/${answers.repo}`],
     [current.docsName, answers.docsName],
+    // portless derives the dev hostname from the docs package name.
+    [`${bareName(current.pkgName)}-docs.localhost`, `${bareName(answers.pkgName)}-docs.localhost`],
     [current.pkgName, answers.pkgName],
     [current.pkgDir, answers.pkgDir],
     [current.author, answers.author],
@@ -235,9 +237,26 @@ function buildReplacements(current, answers) {
     [`appName = '${current.appName}'`, `appName = '${answers.appName}'`],
     [`repo: '${current.repo}'`, `repo: '${answers.repo}'`],
     [`user: '${current.owner}'`, `user: '${answers.owner}'`],
+    // Last: the bare name as it appears in prose, the root package name and
+    // stray comments. Whole-word only — and still worth a `git diff` if the
+    // current name is a common English word.
+    [bareName(current.pkgName), bareName(answers.pkgName), { word: true }],
   ];
 
   return pairs.filter(([from, to]) => from && to && from !== to);
+}
+
+function applyReplacement(text, [from, to, options]) {
+  if (!options?.word) return text.split(from).join(to);
+  return text.replace(new RegExp(`\\b${escapeRegExp(from)}\\b`, 'g'), to);
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function bareName(pkgName) {
+  return pkgName.includes('/') ? pkgName.split('/')[1] : pkgName;
 }
 
 function emailOf(author) {

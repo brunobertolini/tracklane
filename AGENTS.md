@@ -13,6 +13,7 @@ Rules for AI agents working in this repository. Humans: see `CONTRIBUTING.md`.
 | Lint/format | Biome — **no ESLint, no Prettier**      |
 | Releases    | Changesets + npm trusted publishing     |
 | Docs        | Fumadocs on Next.js, `output: 'export'` |
+| Dev server  | portless — named HTTPS URL, worktree-aware |
 
 Rationale and rejected alternatives: `docs/decisions/0001-monorepo-stack.md`.
 Read it before proposing a change to any of the above.
@@ -27,6 +28,10 @@ Read it before proposing a change to any of the above.
 - The docs site is a **static export**. Server-only features (route handlers with
   runtime logic, ISR, middleware, server actions, dynamic OG) do not work.
 - Do not add git hooks, commitlint, husky or lefthook. CI is the gate.
+- `pnpm dev` serves the docs at `https://tln-docs.localhost` (in a worktree:
+  `https://<branch>.tln-docs.localhost`) — there is no fixed port to assume. Read the
+  URL from portless' output, or use `dev:raw` when a plain port is required (Playwright,
+  probes). Never hardcode `localhost:3000`.
 - Any user-facing change needs `pnpm changeset`.
 
 ## Before finishing
