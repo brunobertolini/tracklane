@@ -2,6 +2,9 @@
 
 Rules for AI agents working in this repository. Humans: see `CONTRIBUTING.md`.
 
+This file is the single source of truth. `CLAUDE.md` is a symlink to it — edit
+this file, never the symlink.
+
 ## Stack — do not swap these out
 
 | Concern     | Tool                                    |
@@ -33,6 +36,17 @@ Read it before proposing a change to any of the above.
   URL from portless' output, or use `dev:raw` when a plain port is required (Playwright,
   probes). Never hardcode `localhost:3000`.
 - Any user-facing change needs `pnpm changeset`.
+
+## Detailed conventions
+
+Read the matching file before writing code in that area. Each one is scoped by
+the `paths:` in its frontmatter.
+
+| Working on                        | Read                            |
+| --------------------------------- | ------------------------------- |
+| `packages/tln/src/**`             | `.claude/rules/library-api.md`  |
+| `*.test.ts`, `*.test-d.ts`        | `.claude/rules/testing.md`      |
+| `apps/docs/**`                    | `.claude/rules/docs-site.md`    |
 
 ## Before finishing
 
