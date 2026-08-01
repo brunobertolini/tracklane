@@ -1,5 +1,14 @@
-import type { ResolvedContext, ServerProvider } from '../server.js';
-import type { ConsentState, EventBinding, EventData } from '../vocabulary.js';
+// Through the public entry point, exactly as a provider written elsewhere
+// would import it. A provider that needs something not exported here is
+// telling us the contract is incomplete, which is a conversation rather than
+// a reason to reach inside.
+import type {
+  ConsentState,
+  EventBinding,
+  EventData,
+  ResolvedContext,
+  ServerProvider,
+} from '../index.js';
 
 const ENDPOINT = 'https://www.google-analytics.com/mp/collect';
 

@@ -60,9 +60,18 @@ These are the same for every provider, so they are written once and every provid
 A new adapter opts in with a few lines and gets the whole set, and a rule that changes is changed
 in one place rather than found in four.
 
-`.claude/rules/testing.md` forbids shared test helpers "until a second test actually needs them".
-Meta is that second test. The condition the rule set has been met, which is why this is being
-built now and was not built for GA4 alone.
+**What shipped covers less than that list**, and the difference is worth naming rather than
+leaving for someone to discover. `src/conformance.ts` asserts provider identity, that the same
+call twice produces the same thing (which is how "never invents an identifier" becomes a check
+rather than a promise), that a deduplication id appears only when one was given, that a consent
+denial is never widened into a grant, and that a server adapter throws when its vendor refuses.
+The rest of the list above is still tested per provider, against GA4. Those tests move into the
+suite when a second provider makes the duplication real, which is the same condition
+`.claude/rules/testing.md` sets for any shared helper.
+
+Meta is that second provider, and it has not arrived yet. The suite was built early because the
+consent work needed the invariants written down; the list above is what it grows into, not what it
+is.
 
 The development-time warning owed for `default: 'ignore'`, promised in ADR-0003 and due with
 LinkedIn, is one of these behaviours and belongs in this suite.

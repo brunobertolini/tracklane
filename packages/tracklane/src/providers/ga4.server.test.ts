@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { conformsAsServerProvider } from '../conformance.js';
 import type { ResolvedContext } from '../server.js';
 import { ga4 } from './ga4.server.js';
 
@@ -205,5 +206,22 @@ describe('ga4 server', () => {
         message: expect.not.stringContaining('ana@example.com') as string,
       }),
     );
+  });
+});
+
+// See the note in ga4.browser.test.ts: these are the invariants, not GA4's
+// behaviour.
+describe('ga4 server conformance', () => {
+  conformsAsServerProvider({
+    create: () => ga4(credentials),
+    captured: () => fetchMock.mock.calls,
+    reset: () => {
+      fetchMock.mockClear();
+      fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    },
+    fail: () => {
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 500 }));
+    },
+    context: () => context(),
   });
 });

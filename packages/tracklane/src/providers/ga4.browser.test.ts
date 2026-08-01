@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { conformsAsBrowserProvider } from '../conformance.js';
 import { ga4 } from './ga4.browser.js';
 
 let calls: unknown[][];
@@ -104,5 +105,18 @@ describe('ga4 browser', () => {
     vi.stubGlobal('window', undefined);
 
     expect(() => ga4('G-ABC').track('purchase', {}, {})).toThrow(/gtag/);
+  });
+});
+
+// The invariants every provider owes, run against this one. What GA4 sends and
+// how it spells it is above; this is the part that must hold for a provider
+// written by somebody else, for a vendor nobody here has heard of.
+describe('ga4 browser conformance', () => {
+  conformsAsBrowserProvider({
+    create: () => ga4('G-ABC'),
+    captured: () => calls,
+    reset: () => {
+      calls = [];
+    },
   });
 });
