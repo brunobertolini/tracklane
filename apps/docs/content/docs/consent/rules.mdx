@@ -1,0 +1,96 @@
+---
+title: Jurisdiction rules
+description: What a region requires, as dated data, with a source
+---
+
+The same configuration is lawful in one country and unlawful in another, and the difference is not
+about what you measure. In Brazil, legitimate interest covers analytics, so measurement may start
+before you ask and refusing can cut advertising alone. In Germany, prior consent is required for
+any non-essential storage on the device, so nothing runs until the visitor answers. In California
+it is different again.
+
+`@tracklane/consent-rules` answers that, as data.
+
+```ts
+import { rulesFor, surveyedAt } from '@tracklane/consent-rules';
+
+rulesFor('BR');
+// { mode: 'opt-out',
+//   offer: ['marketing'],
+//   defaults: { analytics: 'granted', marketing: 'granted' },
+//   source: 'https://…' }
+
+rulesFor('DE');
+// { mode: 'opt-in',
+//   offer: ['analytics', 'marketing'],
+//   defaults: { analytics: 'denied', marketing: 'denied' },
+//   source: 'https://…' }
+```
+
+Notice what is not in there: no vendor name, no function, and no way to ask whether an event may be
+sent. It reports a survey, and the package does not import `tracklane`.
+
+## The three answers
+
+`mode` says whether measurement may begin before the question is answered. It drives your banner's
+behaviour, not the library's: `opt-in` means the question is put before the visitor proactively.
+
+`offer` says which purposes the visitor must be given a choice about.
+
+`defaults` says what each purpose is before, or in the absence of, an answer.
+
+**`offer` and `defaults` are separate because one field cannot carry both facts.** Brazil proves
+it: analytics defaults to granted *and* owes the visitor no choice, while marketing defaults to
+granted *and* owes one. A single field would have to conflate "already on" with "must be asked".
+
+## Feeding it to the store
+
+The purposes here are a fixed vocabulary. Your categories are your own names, so you map them at
+the point of use:
+
+```ts
+import { createConsent } from '@tracklane/consent/browser';
+import { rulesFor } from '@tracklane/consent-rules';
+
+const rules = rulesFor('BR');
+
+const consent = createConsent({
+  categories: {
+    stats: rules.defaults.analytics,
+    ads: rules.defaults.marketing,
+  },
+});
+```
+
+If you use the same two names, `categories: rules.defaults` is enough, which is what
+`consentedTracking` does for you.
+
+## Finding the region is yours
+
+Neither package geolocates, and neither ever will. How you learn where a visitor is depends
+entirely on where your site runs, and none of the answers belong in a library:
+
+A **CDN country header** is the reliable one. Cloudflare sends `CF-IPCountry`, Vercel sends
+`x-vercel-ip-country`, and it costs no request and processes no address yourself.
+
+The **browser's time zone**, `Intl.DateTimeFormat().resolvedOptions().timeZone`, is what a fully
+static site has. It needs no network and is device configuration rather than location, so it is not
+personal data. It is wrong for a VPN and for somebody travelling, and if you treat "unknown" as
+"ask", every error falls on the conservative side.
+
+A **geo-IP request** works anywhere and has the irony of processing the visitor's address to decide
+whether you may process their data.
+
+An unknown region resolves to the strictest surveyed configuration, and says so in its `source`.
+Passing `'ZZ'`, the code reserved for unknown, is the honest way to ask for that on purpose.
+
+## Read this before you rely on it
+
+**This is a survey, not legal advice.** `surveyedAt` is the month it was last reviewed, and it is
+exported so you can display or log it. These rules change, and an undated assertion about what the
+law requires would be an opinion wearing the clothes of a fact.
+
+Every rule set carries a `source` pointing at the law or the regulator's guidance it came from,
+and a rule without one does not ship. Read them. If your business depends on the answer, have
+somebody qualified read them too: the authority that fines you is not a party to this package's
+licence, and the controller is you.
