@@ -1,7 +1,7 @@
 import declaration from '../../../../docs/providers.json';
 
 /** One vendor, as the repository declares it. */
-export interface DeclaredProvider {
+interface DeclaredProvider {
   /** The provider's `name` in the library, and the base of its source file names. */
   id: string;
   /** How the vendor spells itself, for a reader. */
@@ -18,7 +18,7 @@ export interface DeclaredProvider {
  * this site that makes that claim reads it from here, and a test in the
  * package fails when it stops matching the source.
  */
-export const providers: DeclaredProvider[] = declaration.providers;
+const providers: DeclaredProvider[] = declaration.providers;
 
 /** Lookup by the library's own provider name. */
 export function providerById(id: string): DeclaredProvider | undefined {
