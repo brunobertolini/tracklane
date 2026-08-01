@@ -1,5 +1,6 @@
 import { highlight } from 'fumadocs-core/highlight';
 import type { CSSProperties, ReactNode } from 'react';
+import { providerById } from '@/lib/providers';
 
 /**
  * The call the application makes. One name, in GA4's vocabulary, written once.
@@ -23,36 +24,48 @@ const CALL = "track('purchase', { transaction_id: 'T-1024', value: 49.9, currenc
  */
 const TRANSLATIONS = [
   {
-    name: 'GA4',
+    id: 'ga4',
     mark: 'G4',
-    shipped: true,
     code: "gtag('event', 'purchase', { transaction_id: 'T-1024', value: 49.9, currency: 'BRL' })",
   },
   {
-    name: 'Meta',
+    id: 'meta',
     mark: 'M',
-    shipped: false,
     code: "fbq('track', 'Purchase', { value: 49.9, currency: 'BRL' }, { eventID: 'T-1024' })",
   },
   {
-    name: 'LinkedIn',
+    id: 'linkedin',
     mark: 'in',
-    shipped: false,
     code: "lintrk('track', { conversion_id: 8421066, conversion_value: 49.9, currency: 'BRL', event_id: 'T-1024' })",
   },
   {
-    name: 'PostHog',
+    id: 'posthog',
     mark: 'Ph',
-    shipped: false,
     code: "posthog.capture('purchase', { transaction_id: 'T-1024', value: 49.9, currency: 'BRL' })",
   },
   {
-    name: 'X',
+    id: 'x',
     mark: 'X',
-    shipped: false,
     code: "twq('event', 'tw-o1abc-oq2de', { value: 49.9, currency: 'BRL', conversion_id: 'T-1024' })",
   },
-];
+] as const;
+
+/**
+ * The name and the shipped/soon badge come from the declared list, never from
+ * this file. What each vendor receives is illustration and belongs here; what
+ * exists is a fact about the library and belongs where a test can check it.
+ */
+const VENDORS = TRANSLATIONS.map((translation) => {
+  const declared = providerById(translation.id);
+
+  if (!declared) {
+    throw new Error(
+      `fan-out: '${translation.id}' is not in docs/providers.json. Add it there, or remove the row.`,
+    );
+  }
+
+  return { ...translation, label: declared.label, shipped: declared.shipped };
+});
 
 /**
  * One line of Shiki-coloured code with no block of its own.
@@ -108,9 +121,9 @@ export function FanOut(): ReactNode {
       </div>
 
       <ul>
-        {TRANSLATIONS.map((vendor, index) => (
+        {VENDORS.map((vendor, index) => (
           <li
-            key={vendor.name}
+            key={vendor.id}
             className="tl-fan-row flex flex-col gap-1.5 border-b border-white/5 px-4 py-3 last:border-b-0 sm:flex-row sm:items-center sm:gap-4 sm:px-5"
             style={{ '--tl-fan-index': index } as CSSProperties}
           >
@@ -123,7 +136,7 @@ export function FanOut(): ReactNode {
               >
                 {vendor.mark}
               </span>
-              <span className="text-sm font-medium text-white/85">{vendor.name}</span>
+              <span className="text-sm font-medium text-white/85">{vendor.label}</span>
               {/* One string, not three fragments: anything reading the text
                   rather than the layout otherwise gets "Metasoon". */}
               <span className="sr-only">{vendor.shipped ? 'shipped' : 'not shipped yet'}</span>

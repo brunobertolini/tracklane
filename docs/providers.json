@@ -1,0 +1,10 @@
+{
+  "$comment": "The one declared list. ADR-0004: what ships is data, not prose repeated six times. `id` is the provider's `name` in the library and the base of its source file names; `shipped` is checked against what packages/tracklane/src/providers actually contains, by declared.test.ts in that directory. Shipping a provider moves one line here.",
+  "providers": [
+    { "id": "ga4", "label": "GA4", "shipped": true },
+    { "id": "meta", "label": "Meta", "shipped": false },
+    { "id": "linkedin", "label": "LinkedIn", "shipped": false },
+    { "id": "posthog", "label": "PostHog", "shipped": false },
+    { "id": "x", "label": "X", "shipped": false }
+  ]
+}
