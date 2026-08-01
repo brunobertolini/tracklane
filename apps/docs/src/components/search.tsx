@@ -13,6 +13,8 @@ import {
   type SharedProps,
 } from 'fumadocs-ui/components/dialog/search';
 import { useI18n } from 'fumadocs-ui/contexts/i18n';
+import { useEffect } from 'react';
+import { tracking } from '@/components/analytics';
 import { basePath } from '@/lib/shared';
 
 export default function DefaultSearchDialog(props: SharedProps) {
@@ -25,6 +27,20 @@ export default function DefaultSearchDialog(props: SharedProps) {
       locale,
     }),
   });
+
+  // What people look for, and by omission what the documentation does not
+  // answer. Reported once the typing settles, because every keystroke is a
+  // query to the index and none of them is a search anybody performed.
+  useEffect(() => {
+    const term = search.trim();
+    if (term.length < 3) return;
+
+    const settled = setTimeout(() => {
+      tracking.track('search', { search_term: term });
+    }, 800);
+
+    return () => clearTimeout(settled);
+  }, [search]);
 
   return (
     <SearchDialog search={search} onSearchChange={setSearch} isLoading={query.isLoading} {...props}>

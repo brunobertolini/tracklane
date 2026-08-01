@@ -1,0 +1,49 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { createTracking, ga4 } from 'tracklane/browser';
+import { ga4MeasurementId } from '@/lib/analytics';
+
+/**
+ * This site, measured with the library it documents.
+ *
+ * Built once at module scope, which is the same shape a host would write: one
+ * instance for the page, created before anything has an event to send. With no
+ * measurement id there are no providers, so `track` is a loop over nothing and
+ * the site behaves identically without a single conditional at the call sites.
+ */
+export const tracking = createTracking({
+  providers: ga4MeasurementId ? [ga4(ga4MeasurementId)] : [],
+  // The console is the only channel a static site has. It is noisy when an
+  // extension blocks the tag, and that noise is the point: a send that never
+  // arrives should be visible somewhere rather than believed.
+  onError: (error) => {
+    console.error(`[analytics] ${error.provider}/${error.event}: ${error.message}`);
+  },
+});
+
+/**
+ * A page view for every navigation after the first.
+ *
+ * Google's tag already reported the page the visitor landed on, as part of
+ * configuring the property. Reporting it again here is the duplicate page view
+ * that reads as twice the traffic, so the first run is skipped. The title is
+ * left to the tag, which reads it when the hit is sent.
+ */
+export function PageViews(): null {
+  const pathname = usePathname();
+  const landing = useRef(true);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the path is what this reports, not a value read here
+  useEffect(() => {
+    if (landing.current) {
+      landing.current = false;
+      return;
+    }
+
+    tracking.track('page_view', { page_location: window.location.href });
+  }, [pathname]);
+
+  return null;
+}

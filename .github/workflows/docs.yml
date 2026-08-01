@@ -29,6 +29,11 @@ jobs:
         # Served from the root of tracklane.codar.me, so no base path. The
         # `public/CNAME` file is what tells Pages which domain this is.
         run: pnpm build --filter=tracklane-docs...
+        env:
+          # A repository variable, not a secret: a measurement id is public by
+          # construction, and it ships inside the page. Absent in forks, where
+          # the site builds with no destinations rather than into this property.
+          NEXT_PUBLIC_GA4_ID: ${{ vars.NEXT_PUBLIC_GA4_ID }}
       - uses: actions/upload-pages-artifact@v5
         with:
           path: apps/docs/out
