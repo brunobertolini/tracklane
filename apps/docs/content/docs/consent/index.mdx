@@ -1,0 +1,190 @@
+---
+title: Consent
+description: Hold the visitor's answer, and let it decide which destinations exist
+---
+
+`tracklane` never withholds a send. It has no consent gate, no legal basis and no audit trail,
+and it never will: a complete implementation that had all of it died four separate times before
+this library shipped anything. What it does is forward a consent declaration to each vendor that
+documents a command for it, and nothing to the vendors that have none.
+
+That leaves a real question unanswered. If refusing advertising has to stop advertising events,
+something has to decide. **`@tracklane/consent` is where that lives**, in a package the core does
+not know exists.
+
+```bash
+pnpm add @tracklane/consent @tracklane/consent-rules
+```
+
+## The short path
+
+```ts title="tracking.ts"
+import { consentedTracking } from '@tracklane/consent/tracklane';
+import { rulesFor } from '@tracklane/consent-rules';
+import { ga4, meta } from 'tracklane/browser';
+
+export const { track, consent } = consentedTracking({
+  categories: rulesFor('BR').defaults,
+  providers: [
+    ga4('G-XXXXXXX'),
+    { provider: meta('1234567890'), needs: 'marketing' },
+  ],
+});
+```
+
+The categories are yours. `rulesFor` is one way to pick them, and passing
+`{ analytics: 'granted', marketing: 'granted' }` by hand is another: this entry point takes an
+object and never learns a jurisdiction exists.
+
+```ts title="banner.ts"
+import { consent } from './tracking.js';
+
+if (!consent.answered) {
+  accept.onclick = () => { consent.answer({ analytics: 'granted', marketing: 'granted' }); hide(); };
+  refuse.onclick = () => { consent.answer({ analytics: 'granted', marketing: 'denied' }); hide(); };
+}
+```
+
+Everywhere else in your application imports `track` and never learns that consent exists.
+
+`consentedTracking` is a separate entry point, and the only one in this package that knows
+`tracklane`. It builds the tracking instance, and on every answer it builds a new one and forwards
+the declaration through it. `track` delegates to whichever instance is current, so the reference
+you exported never goes stale.
+
+## Presence and signalling are not the same lever
+
+A bare entry is unconditional. A wrapped one, `{ provider, needs }`, exists only while every
+category in `needs` is granted. `needs` takes one category or an array.
+
+**GA4 is bare on purpose.** It documents a consent command with four separate signals, precisely
+because one tag serves more than one purpose, and it honours a denial by running cookieless and
+reporting modelled data. Removing it from the list measures less than the vendor itself asks for.
+Meta documents no equivalent, so presence is the only lever it has. LinkedIn has no mechanism at
+all.
+
+This is why no shape can file each destination under one category: the relationship is irregular
+because the vendors are irregular. You write that irregularity once, in this list, and it is
+visible.
+
+## The answer lives in a cookie
+
+Local storage would serve the browser and be invisible to your server, which has to read the same
+answer on every request. So the answer is a first-party cookie, and **its format is public
+contract**:
+
+```
+tl_consent=analytics:granted|marketing:denied
+```
+
+Readable in devtools and in a raw `Cookie` header. No encoding, no JSON, no base64.
+
+It carries category to decision and nothing else. There is deliberately no version token and no
+room to extend it, because a timestamp, a policy version or a legal basis would each have to break
+a documented format in the open rather than arrive as a field somebody added. Changing your policy
+means a new cookie name, which asks everybody again, and that is the whole migration story.
+
+## Google's first declaration is yours to write
+
+Google requires its consent default **before** the command that configures the property, and that
+command is the snippet in your HTML. Any function this library exposes runs after it: a module is
+deferred, so even the first line of your bundle executes after the page's inline scripts.
+
+There is no way around it that costs less than the six lines it saves, so those six lines are
+yours, in the file where you already paste Google's snippet. They are writable only because the
+cookie is legible:
+
+```html
+<script>
+  var c = (document.cookie.match(/(?:^|; )tl_consent=([^;]*)/) || [])[1] || '';
+  var ads = c.includes('marketing:denied') ? 'denied' : 'granted';
+  gtag('consent', 'default', {
+    analytics_storage: c.includes('analytics:denied') ? 'denied' : 'granted',
+    ad_storage: ads, ad_user_data: ads, ad_personalization: ads
+  });
+  gtag('config', 'G-XXXXXXX');
+</script>
+```
+
+Adjust the defaults to match your jurisdiction: the block above assumes opt-out. Only Google
+requires a declaration before measuring; for every other vendor the later signal is enough and
+this package sends it for you.
+
+## On the server
+
+There is nothing to rebuild there. The instance is built inside the handler from that request's
+cookie and discarded with it, so `consentedTracking` is browser-only and the server uses the same
+selection function directly:
+
+```ts
+import { readConsent, selectProviders } from '@tracklane/consent/server';
+import { createTracking, ga4, meta } from 'tracklane/server';
+
+export async function POST(request: Request): Promise<Response> {
+  const cookies = request.headers.get('cookie');
+
+  const { state } = readConsent(cookies, {
+    categories: { analytics: 'granted', marketing: 'granted' },
+  });
+
+  const { track } = createTracking({
+    providers: selectProviders(state, [
+      ga4({ measurementId, apiSecret }),
+      { provider: meta({ pixelId, accessToken }), needs: 'marketing' },
+    ]),
+  });
+
+  await track('purchase', order, { cookies });
+  return new Response(null, { status: 204 });
+}
+```
+
+`readConsent` takes the same value `EventContext.cookies` does, so one variable feeds both.
+
+**Build the instance inside the handler, never at module scope.** A server instance is shared by
+every request, so a retained one applies one visitor's answer to another visitor's conversion.
+
+## Your own category names
+
+Nothing fixes them. Name your categories whatever your business calls them:
+
+```ts
+export const { track, consent } = consentedTracking({
+  categories: { stats: 'granted', ads: 'granted' },
+  providers: [ga4('G-XXXXXXX'), { provider: meta('123'), needs: 'ads' }],
+  consent: (state) => ({
+    analytics_storage: state.stats,
+    ad_storage: state.ads,
+    ad_user_data: state.ads,
+    ad_personalization: state.ads,
+  }),
+});
+```
+
+The `consent` function is the only extra step, and only because a vendor command speaks Google's
+vocabulary while your categories speak yours. Only you can say what `ads` means to a vendor, so
+only you can write that line.
+
+With the canonical `analytics` and `marketing` names it is written for you, and a category the
+default collapse does not recognise produces no signal at all rather than a guessed one.
+
+## Three things it does not do
+
+**Revocation is not retroactive.** Under opt-out, a vendor's tag has already fired its page view
+before the visitor refuses. Rebuilding stops future events only, and the tag stays on the page,
+because tags were never this library's to remove. By hand the outcome is identical.
+
+**A provider entering late never received your earlier `identify`.** There is no queue and no
+replay, and holding the last identity in memory to resend it is the retained-identity hazard the
+server surface exists to avoid. Call `identify` again after the answer if it matters to a provider
+that can enter late.
+
+**`install` runs on every rebuild.** No provider shipped here is affected, because none of them
+install anything. If you write one that loads a script, make its `install` idempotent.
+
+## What this package will never do
+
+It stores an answer to categories you named. It has no UI, no geography, no legal basis and no
+audit trail, and neither package can answer "may this be sent": one exposes state, the other
+returns a frozen object with no function in it. The decision of what to do with the answer is
+yours, in the list you wrote, where you can read it.
