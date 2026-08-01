@@ -1,7 +1,6 @@
 {
   "name": "@tracklane/consent-rules",
   "version": "0.1.0",
-  "private": true,
   "description": "A dated, sourced survey of what a jurisdiction requires before measurement may begin. Data, not compliance advice.",
   "keywords": [
     "consent",

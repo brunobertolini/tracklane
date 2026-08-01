@@ -58,12 +58,15 @@ non-goals) and `0003-public-surface.md` (the API it produced). Vendor facts:
 against a real property, with events confirmed visible in its report. Plus
 `@tracklane/consent` and `@tracklane/consent-rules`, which hold the visitor's
 answer and survey what a jurisdiction requires; the documentation site is their
-first host. **Neither is published, and both carry `"private": true` to keep it
-that way.** An absent changeset is not the guard people assume: `changeset
-publish` ships any workspace package whose version is not already on npm, so a
-merge to `main` would have published both. Removing `private` is the deliberate
-act of releasing them, and `@tracklane/consent-rules` must not be released until
-someone qualified has reviewed its jurisdiction map (ADR-0006).
+first host, verified against the real property with events confirmed in its
+report.
+
+Both are published. If you ever add a package that must *not* publish, give it
+`"private": true`: an absent changeset is not the guard people assume, because
+`changeset publish` ships any workspace package whose version is not already on
+npm. `@tracklane/consent-rules` went out without a qualified review of its
+jurisdiction map, which ADR-0005 originally required; that record says what was
+traded and what mitigates it.
 
 **Next:** Meta, then LinkedIn, then PostHog, then X. One vendor at a time, both
 halves before moving on: the provider contract has two halves and proving one

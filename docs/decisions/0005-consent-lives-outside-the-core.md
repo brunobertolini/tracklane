@@ -174,8 +174,22 @@ requires is an opinion presented as a fact, and these rules do change.
 A disclaimer is worth having and settles the smaller risk, which is a user of the package trying
 to recover from the author. It does nothing about the larger one: the author's own application is
 the first and largest consumer, and a disclaimer written against oneself protects nobody in that
-direction. The map is used in production for a while, and reviewed by someone qualified, before it
-is published as advice to strangers.
+direction.
+
+**This record originally required a qualified review before publication. That requirement was
+lifted on 2026-08-01, deliberately, and the trade is worth stating exactly.** No lawyer was going
+to read this map, so waiting for one meant never publishing it. The author accepted the residual
+risk knowing what it is.
+
+What mitigates it: the name promises a survey and not compliance, `surveyedAt` dates it, every rule
+carries the source it was read from, an unknown region gets the strictest configuration surveyed,
+and the package README opens with the disclaimer instead of burying it, because the npm page is
+where somebody decides to install.
+
+What does not: three jurisdictions is a starting point, everyone else receives a fallback that may
+be stricter than their own law requires, and nobody qualified has confirmed that the three are read
+correctly. A user who treats this as compliance advice is doing the one thing the first section of
+its README tells them not to.
 
 ## What actually holds this line, and what does not
 
