@@ -35,9 +35,9 @@ export async function CodeBlock({ code, title, lang = 'ts' }: CodeBlockProps): P
   });
 
   return (
-    <figure className="overflow-hidden rounded-xl border bg-fd-card">
+    <figure className="overflow-hidden rounded-xl border border-white/10 bg-[#0d0d0e]">
       {title && (
-        <figcaption className="border-b bg-fd-muted/40 px-4 py-2 font-mono text-xs text-fd-muted-foreground">
+        <figcaption className="border-white/10 border-b px-4 py-2.5 font-mono text-[11px] uppercase tracking-widest text-white/35">
           {title}
         </figcaption>
       )}
