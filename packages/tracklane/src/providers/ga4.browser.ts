@@ -1,5 +1,15 @@
-import type { BrowserProvider, TrackOptions } from '../browser.js';
-import type { ConsentState, EventBinding, EventData, UserData } from '../vocabulary.js';
+// Through the public entry point, exactly as a provider written elsewhere
+// would import it. A provider that needs something not exported here is
+// telling us the contract is incomplete, which is a conversation rather than
+// a reason to reach inside.
+import type {
+  BrowserProvider,
+  ConsentState,
+  EventBinding,
+  EventData,
+  TrackOptions,
+  UserData,
+} from '../index.js';
 
 interface GtagWindow {
   gtag?: (...args: unknown[]) => void;
