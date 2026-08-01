@@ -1,0 +1,14 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">tracklane</title>
+  <desc id="desc">A single event lane splitting into three destination lanes.</desc>
+  <rect x="12" y="12" width="72" height="72" rx="18" fill="#09090B"/>
+  <path d="M22 48H38" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+  <path d="M38 48H50" stroke="#FF7043" stroke-width="7" stroke-linecap="round"/>
+  <path d="M50 48C60 48 63 30 73 30" stroke="#FF7043" stroke-width="7" stroke-linecap="round"/>
+  <path d="M50 48H74" stroke="#FF7043" stroke-width="7" stroke-linecap="round"/>
+  <path d="M50 48C60 48 63 66 73 66" stroke="#FF7043" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="23" cy="48" r="4" fill="#FFFFFF"/>
+  <circle cx="73" cy="30" r="5" fill="#FFFFFF"/>
+  <circle cx="74" cy="48" r="5" fill="#FFFFFF"/>
+  <circle cx="73" cy="66" r="5" fill="#FFFFFF"/>
+</svg>
