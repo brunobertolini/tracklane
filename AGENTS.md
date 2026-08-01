@@ -32,10 +32,14 @@ non-goals) and `0003-public-surface.md` (the API it produced). Vendor facts:
 
 ### Settled — do not reopen
 
-- **No consent gate, ever.** The core never withholds a send on policy grounds.
-  Consent is a mapping: the host calls, we forward to each vendor's own command,
-  and forward nothing to vendors that have none. No legal basis, no audit trail.
-  A complete prior implementation had all of it and never shipped in four tries.
+- **No consent gate in the core, ever.** `tracklane` never withholds a send on
+  policy grounds and never learns what a consent category is. Consent there is a
+  mapping: the host calls, we forward to each vendor's own command, and forward
+  nothing to vendors that have none. No legal basis, no audit trail. A complete
+  prior implementation had all of it and never shipped in four tries.
+  Deciding *which vendors exist* is the host's, and `@tracklane/consent` helps
+  it do that outside the core (ADR-0005, ADR-0006). The line is that the
+  decision happens before `createTracking`, never inside a dispatch loop.
 - **We do not install vendor tags.** They belong on the page, put there the way
   each vendor documents. Injecting third-party scripts is the host's decision,
   and a duplicate configuration command emits a duplicate page view.
@@ -51,7 +55,14 @@ non-goals) and `0003-public-surface.md` (the API it produced). Vendor facts:
 ## Where this stands
 
 **Done:** the core on both halves, and GA4 on both halves — verified end to end
-against a real property, with events confirmed visible in its report.
+against a real property, with events confirmed visible in its report. Plus
+`@tracklane/consent` and `@tracklane/consent-rules`, which hold the visitor's
+answer and survey what a jurisdiction requires; the documentation site is their
+first host.
+
+**If you ever add a package that must not publish, give it `"private": true`.**
+An absent changeset is not the guard people assume: `changeset publish` ships
+any workspace package whose version is not already on npm.
 
 **Next:** Meta, then LinkedIn, then PostHog, then X. One vendor at a time, both
 halves before moving on: the provider contract has two halves and proving one
@@ -95,8 +106,10 @@ carries the captured request and a screenshot of the vendor's own report, or it
 does not go in. `docs/decisions/0004-how-a-provider-gets-in.md` records that
 decision, along with the three checks the build performs for you: a provider may
 import only what the package exports publicly, the shared conformance suite covers
-the behaviour the types cannot express, and the declared provider list must match
-what the source actually contains.
+behaviour the types cannot express, and the declared provider list must match
+what the source actually contains. The conformance suite covers less than
+ADR-0004's list today, and that record says which part; the rest is still tested
+per provider until a second one makes the duplication real.
 
 ## Documentation policy
 
@@ -122,8 +135,11 @@ Read it before proposing a change to any of the above.
 
 ## Rules
 
-- The published package is `packages/tracklane`. It ships ESM only. Never add a CJS
-  build, `require` conditions or `main`-first exports.
+- Three packages publish: `packages/tracklane`, `packages/consent` and
+  `packages/consent-rules`. All ESM only. Never add a CJS build, `require`
+  conditions or `main`-first exports to any of them.
+- `packages/tracklane` must never depend on either consent package. The reverse is
+  allowed, and only `@tracklane/consent/tracklane` uses it.
 - `exports` must keep `"types"` as the first condition.
 - Public API needs TSDoc — the docs site generates its type tables from it.
 - `isolatedDeclarations` is on: every exported symbol needs an explicit type.

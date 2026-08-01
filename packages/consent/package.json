@@ -1,0 +1,81 @@
+{
+  "name": "@tracklane/consent",
+  "version": "0.1.0",
+  "description": "Holds the visitor's consent answer in a first-party cookie, readable by both the browser and the server. No geography, no vendor, no mandatory UI.",
+  "keywords": [
+    "consent",
+    "cookie",
+    "privacy",
+    "gdpr",
+    "typescript",
+    "esm"
+  ],
+  "license": "MIT",
+  "author": "Bruno Bertolini <dev@brunobertolini.com>",
+  "homepage": "https://tracklane.codar.me",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brunobertolini/tracklane.git",
+    "directory": "packages/consent"
+  },
+  "bugs": "https://github.com/brunobertolini/tracklane/issues",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./tracklane": {
+      "types": "./dist/tracklane.d.ts",
+      "default": "./dist/tracklane.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "package:check": "publint --strict && attw --pack . --profile esm-only"
+  },
+  "peerDependencies": {
+    "tracklane": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "tracklane": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "4.1.10",
+    "publint": "0.3.22",
+    "tracklane": "workspace:*",
+    "tsdown": "0.22.14",
+    "typescript": "catalog:",
+    "vitest": "4.1.10"
+  }
+}

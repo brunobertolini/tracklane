@@ -1,0 +1,61 @@
+{
+  "name": "@tracklane/consent-rules",
+  "version": "0.1.0",
+  "description": "A dated, sourced survey of what a jurisdiction requires before measurement may begin. Data, not compliance advice.",
+  "keywords": [
+    "consent",
+    "gdpr",
+    "lgpd",
+    "ccpa",
+    "privacy",
+    "typescript",
+    "esm"
+  ],
+  "license": "MIT",
+  "author": "Bruno Bertolini <dev@brunobertolini.com>",
+  "homepage": "https://tracklane.codar.me",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brunobertolini/tracklane.git",
+    "directory": "packages/consent-rules"
+  },
+  "bugs": "https://github.com/brunobertolini/tracklane/issues",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "package:check": "publint --strict && attw --pack . --profile esm-only"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "4.1.10",
+    "publint": "0.3.22",
+    "tsdown": "0.22.14",
+    "typescript": "catalog:",
+    "vitest": "4.1.10"
+  }
+}
