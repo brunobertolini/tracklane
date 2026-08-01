@@ -33,7 +33,11 @@ canonical name as-is; `ignore` stays silent. Use `ignore` **only** when your ven
 identifiers in its own dashboard, so no name could possibly be guessed. That is the case for
 LinkedIn and X, and it is the only honest reason to send nothing.
 
-`install` runs once, when tracking is created. It may be async, and the core does not wait on it.
+`install` runs when tracking is created. It may be async, and the core does not wait on it.
+
+**Make it idempotent.** A host that rebuilds its tracking creates again and installs again,
+including providers that were already there. `@tracklane/consent` does exactly that on every
+consent answer, so a second install is a normal event and not a misuse.
 
 ### Event names, and refusing to send
 

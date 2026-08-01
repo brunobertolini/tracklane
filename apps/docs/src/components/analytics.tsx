@@ -1,19 +1,28 @@
 'use client';
 
+import type { ConsentedTracking } from '@tracklane/consent/tracklane';
+import { consentedTracking } from '@tracklane/consent/tracklane';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
-import { createTracking, ga4 } from 'tracklane/browser';
-import { ga4MeasurementId } from '@/lib/analytics';
+import { ga4 } from 'tracklane/browser';
+import { consentRegion, ga4MeasurementId } from '@/lib/analytics';
 
 /**
- * This site, measured with the library it documents.
+ * This site, measured with the library it documents, wired to a consent
+ * banner through `@tracklane/consent/tracklane`.
  *
  * Built once at module scope, which is the same shape a host would write: one
  * instance for the page, created before anything has an event to send. With no
  * measurement id there are no providers, so `track` is a loop over nothing and
  * the site behaves identically without a single conditional at the call sites.
+ *
+ * GA4 is the only vendor here and it is a bare entry, not a wrapped one: it
+ * has its own consent command (ADR-0006) and stays configured regardless of
+ * the answer, reading `consent.state` to decide whether it runs cookied or
+ * modelled. There is no `needs` to declare for it.
  */
-export const tracking = createTracking({
+export const tracking: ConsentedTracking = consentedTracking({
+  region: consentRegion,
   providers: ga4MeasurementId ? [ga4(ga4MeasurementId)] : [],
   // The console is the only channel a static site has. It is noisy when an
   // extension blocks the tag, and that noise is the point: a send that never
