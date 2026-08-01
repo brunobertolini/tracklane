@@ -42,6 +42,37 @@ There are no git hooks: CI is the source of truth. Run `pnpm check` before pushi
    (`feat:`, `fix:`, `docs:`, `chore:`). This is a convention: the release bump comes
    from your changeset, not the commit message.
 
+## Adding a provider
+
+A provider talks to one vendor. It imports the contract from `tracklane` and nothing
+else, and the providers shipped here use exactly that contract, so yours can do
+everything theirs can. `docs/decisions/0004-how-a-provider-gets-in.md` records why the
+requirements below exist.
+
+Three of them the build checks for you: a provider may only import what the package
+exports publicly, the shared conformance suite covers the behaviour the types cannot
+express, and the declared provider list must match the source.
+
+The fourth is on you, and it is the one that matters most. **A provider is not merged
+without evidence that its events arrived.** These vendors fail by accepting: a `204`
+means the request reached them, not that the event exists. Every defect that has
+mattered in this library was invisible to unit tests.
+
+So a provider pull request carries:
+
+1. The outgoing request as it left the built library, captured in a browser or from
+   your server, showing the parameters that were sent.
+2. A screenshot of the vendor's own report with the event visible in it.
+
+Use an ordinary desktop user agent. At least GA4 discards headless traffic as bots,
+silently, which makes the whole exercise measure nothing while appearing to pass.
+
+This needs your own account with that vendor, and for Meta, LinkedIn and X that means
+an advertiser account. There is no way around it: nobody can verify an integration
+against a vendor they cannot see into. A provider that arrives slowly and verified is
+worth more than one that arrives quickly and measures nothing while looking like it
+does.
+
 ## Code style
 
 Biome handles formatting and linting; there is no ESLint or Prettier. Editor setup:

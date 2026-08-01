@@ -90,6 +90,14 @@ So, whatever tooling you have:
 Credentials for a test property are read by variable name from the environment.
 Never open an env file to get them.
 
+**This gates the merge, it does not advise the author.** A provider pull request
+carries the captured request and a screenshot of the vendor's own report, or it
+does not go in. `docs/decisions/0004-how-a-provider-gets-in.md` records that
+decision, along with the three checks the build performs for you: a provider may
+import only what the package exports publicly, the shared conformance suite covers
+the behaviour the types cannot express, and the declared provider list must match
+what the source actually contains.
+
 ## Documentation policy
 
 **Do not replicate vendor documentation.** Our pages cover what is ours — the
