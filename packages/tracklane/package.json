@@ -1,6 +1,6 @@
 {
   "name": "tracklane",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "One interface between your application and every tool that receives events, for the browser and server. GA4 today; Meta, LinkedIn, PostHog and X next.",
   "keywords": [
     "analytics",
