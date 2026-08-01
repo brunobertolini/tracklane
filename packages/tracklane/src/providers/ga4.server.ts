@@ -18,7 +18,7 @@ export interface Ga4ServerConfig {
 
 /**
  * The visitor cookie holds `GA1.<depth>.<client_id>`, and the client id
- * itself contains a dot — so the identifier is the last two segments, which
+ * itself contains a dot, so the identifier is the last two segments, which
  * is what survives Google's varying prefix depth.
  *
  * The value must be the cookie as the browser wrote it. A host passing a
@@ -39,21 +39,21 @@ function visitorId(cookies: Record<string, string>): string | undefined {
  *
  * Verified against Google's live tag on 2026-07-31 rather than assumed:
  *
- * - `GS2.1.s1785511401$o1$g0$t1785511401$j60$l0$h0` — the current one. The
+ * - `GS2.1.s1785511401$o1$g0$t1785511401$j60$l0$h0`, the current one. The
  *   third dot-segment packs several fields joined by `$`, and the session is
  *   the first of them, prefixed with `s`.
- * - `GS1.1.1785511401.1.1.…` — the older one, where the third dot-segment is
+ * - `GS1.1.1785511401.1.1.…`, the older one, where the third dot-segment is
  *   the session on its own.
  *
  * Reading the third segment blindly works for the old layout and returns the
- * whole `s…$o1$g0$…` blob for the new one — which the vendor would accept and
+ * whole `s…$o1$g0$…` blob for the new one, which the vendor would accept and
  * silently fail to match. Hence the two shapes, and hence `undefined` rather
  * than a guess when neither fits.
  */
 function sessionId(cookies: Record<string, string>, measurementId: string): string | undefined {
   // Scoped to *this* property's cookie. A page with two GA4 properties has two
   // `_ga_*` cookies, and taking whichever came first would attach another
-  // property's session to our event — which Google accepts and never matches.
+  // property's session to our event, which Google accepts and never matches.
   const value = cookies[`_ga_${measurementId.replace(/^G-/, '')}`];
   const segment = value?.split('.')[2];
   if (!segment) return undefined;
@@ -67,7 +67,7 @@ function sessionId(cookies: Record<string, string>, measurementId: string): stri
 
 /**
  * The Measurement Protocol documents exactly two consent fields, and spells
- * their values in upper case where the browser spells them in lower — one of
+ * their values in upper case where the browser spells them in lower, one of
  * the small asymmetries an adapter absorbs so nobody else has to.
  */
 function consentBody(state: ConsentState | undefined): Record<string, string> | undefined {
@@ -123,7 +123,7 @@ export function ga4(
         // Naming the vendor's own field, so that searching Google's docs
         // for the error leads somewhere.
         throw new Error(
-          'ga4: cannot build client_id — no _ga cookie among the cookies passed in context',
+          "ga4: cannot build client_id, no _ga cookie among the cookies passed in context. Ensure GA4's browser tag has set it first.",
         );
       }
 
@@ -143,7 +143,7 @@ export function ga4(
       }
 
       // The dedup id maps nowhere: GA4 documents no browser-to-server
-      // deduplication. `transaction_id` — business data — travels in params
+      // deduplication. `transaction_id` (business data) travels in params
       // and is the duplicate control this vendor does have.
       const body: Record<string, unknown> = {
         client_id: clientId,
@@ -157,7 +157,7 @@ export function ga4(
         // Each property is an object with a `value` key here, where the
         // browser takes the bare value. Sending the bare value is rejected
         // by Google's validation endpoint and **accepted with 204 by the
-        // collection endpoint**, which then drops it — verified on
+        // collection endpoint**, which then drops it, verified on
         // 2026-07-31. One of several places where this vendor fails by
         // accepting.
         body.user_properties = Object.fromEntries(

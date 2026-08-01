@@ -5,26 +5,19 @@ description: What this library does with GA4, and what it deliberately does not
 
 This page covers what is **ours**: what you configure, what we translate, and the traps that cost
 us a day to find. For what each GA4 parameter means, go to
-[Google's own reference](https://developers.google.com/analytics/devguides/collection/ga4/reference/events) —
-we do not restate it here, and we would only restate it wrong.
+[Google's own reference](https://developers.google.com/analytics/devguides/collection/ga4/reference/events). We do not restate it here.
 
 ## Browser
 
 **Put Google's tag on the page first**, the way
-[Google documents it](https://developers.google.com/analytics/devguides/collection/ga4/tag-options) —
+[Google documents it](https://developers.google.com/analytics/devguides/collection/ga4/tag-options):
 a snippet in your HTML or a tag manager. This library talks to the tag that is there; it does not
 inject scripts into your page and does not configure your property.
 
-```html
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag() { dataLayer.push(arguments); }
-  gtag('js', new Date());
-  gtag('consent', 'default', { ad_storage: 'denied', analytics_storage: 'denied' });
-  gtag('config', 'G-XXXXXXX');
-</script>
-```
+Two things about that snippet matter to this library, and only two: it must define `gtag` and
+configure your property **before** `createTracking` runs, and if you declare initial consent, that
+declaration belongs in the snippet, since Google requires it before the property is configured,
+and by the time you hold the object `createTracking` returns, that moment has passed.
 
 ```ts
 import { createTracking, ga4 } from 'tracklane/browser';
@@ -35,12 +28,9 @@ const { track, identify, consent } = createTracking({
 ```
 
 The measurement id must match the tag on the page. If the tag is missing, calls fail and are
-reported through `onError` — the same thing a hand-written `gtag(…)` would do, rather than a
-silent no-op that leaves you believing you are measuring.
+reported through `onError`, the same thing a hand-written `gtag(…)` would do.
 
-**The initial consent declaration goes in the snippet**, not here. Google requires it before the
-property is configured, and the configuration is yours. This library handles every declaration
-after that, through `consent()`.
+This library handles every consent declaration *after* the initial one, through `consent()`.
 
 ### Optional configuration
 
@@ -64,10 +54,14 @@ The consent vocabulary is Google's own spelling, so nothing is translated and no
 not declare can be invented on your behalf.
 
 `dedupId` maps nowhere because GA4 documents no browser-to-server deduplication. Inventing a
-parameter for it would imply a merge the platform never performs. Use `transaction_id` — which is
-business data — to control duplicate purchases.
+parameter for it would imply a merge the platform never performs. Use `transaction_id` (which is
+business data) to control duplicate purchases.
 
 ## Server
+
+Create the API secret first: in Google Analytics, **Admin → Data Streams →** your stream **→
+Measurement Protocol API secrets**. It is a credential. Keep it out of your client bundle, which
+is one of the reasons the server entry point is separate.
 
 ```ts
 import { createTracking, ga4 } from 'tracklane/server';
@@ -86,7 +80,7 @@ await track('purchase', order, {
 **Pass the cookies.** GA4's server API needs both a visitor id and a session id, and both live in
 cookies its own browser tag has already set. The library reads them for you.
 
-Without the visitor cookie the library **refuses to send** and tells you why — there is no valid
+Without the visitor cookie the library **refuses to send** and tells you why: there is no valid
 request to make, and the endpoint would have answered success anyway. Without the session cookie
 it sends and warns, because the event will be accepted and appear in no report.
 
@@ -109,4 +103,4 @@ the status code tell you almost nothing.
 ## Not included
 
 Consent gating, queues, retries, and any decision about whether an event should be sent. See
-[what this library is not](/docs).
+[what this library is not](/docs/#what-it-is-not).

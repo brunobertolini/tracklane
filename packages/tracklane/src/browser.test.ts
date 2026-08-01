@@ -196,7 +196,7 @@ describe('event resolution', () => {
 
   it('sends nothing when the vendor mints event ids in a dashboard', () => {
     // LinkedIn and X have no event names at all, so an unmapped event has
-    // no call that could be made — not silence by policy.
+    // no call it could make. The absence reflects the mapping, not a policy choice.
     const track_ = vi.fn<BrowserProvider['track']>();
     const { track } = createTracking({
       providers: [provider({ default: 'ignore', track: track_ })],

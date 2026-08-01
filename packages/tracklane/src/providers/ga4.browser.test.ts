@@ -30,7 +30,7 @@ describe('ga4 browser', () => {
   });
 
   it('addresses the configured property on every event', () => {
-    // Without send_to, gtag sends to every property configured on the page —
+    // Without send_to, gtag sends to every property configured on the page,
     // including one a tag manager owns and we were never meant to feed.
     ga4('G-ABC').track('purchase', {}, {});
 
@@ -87,7 +87,7 @@ describe('ga4 browser', () => {
 
   it('never installs anything on the page', () => {
     // The tag belongs to the host. This library does not inject third-party
-    // scripts, and it does not configure the property — a second
+    // scripts, and it does not configure the property. A second
     // configuration would emit a second page view on every load.
     expect(ga4('G-ABC').install).toBeUndefined();
   });

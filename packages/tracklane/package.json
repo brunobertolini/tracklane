@@ -1,7 +1,7 @@
 {
   "name": "tracklane",
   "version": "0.1.0",
-  "description": "One interface between your application and every tool that receives events — GA4, Meta, LinkedIn, PostHog, X, browser and server.",
+  "description": "One interface between your application and every tool that receives events, for the browser and server. GA4 today; Meta, LinkedIn, PostHog and X next.",
   "keywords": [
     "analytics",
     "tracking",
@@ -15,7 +15,7 @@
   ],
   "license": "MIT",
   "author": "Bruno Bertolini <dev@brunobertolini.com>",
-  "homepage": "https://github.com/brunobertolini/tracklane#readme",
+  "homepage": "https://tracklane.codar.me",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brunobertolini/tracklane.git",

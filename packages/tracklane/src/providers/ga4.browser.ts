@@ -32,7 +32,7 @@ function push(...args: unknown[]): void {
 
   if (!gtag) {
     throw new Error(
-      "ga4: window.gtag is not defined — add Google's tag to the page before creating tracking",
+      "ga4: window.gtag is not defined. Add Google's tag to the page before creating tracking.",
     );
   }
 
@@ -43,7 +43,7 @@ function push(...args: unknown[]): void {
  * Google Analytics 4 in the browser, through `gtag.js`.
  *
  * **This provider does not load Google's tag.** The tag belongs on the page,
- * installed the way Google documents it — a snippet in the HTML, or a tag
+ * installed the way Google documents it: a snippet in the HTML, or a tag
  * manager. This library talks to the tag that is already there; it never
  * injects a third-party script into your page, and it never issues the
  * property configuration that would emit a second page view.
@@ -81,7 +81,7 @@ export function ga4(measurementId: string, config: Ga4BrowserConfig = {}): Brows
     track(name: string, data: EventData, _options: TrackOptions): void {
       // GA4 documents no browser-to-server deduplication, so `dedupId` maps
       // to nothing here. That is the exact translation of "this concept does
-      // not exist in this vendor" — inventing a param would imply a merge
+      // not exist in this vendor". Inventing a param would imply a merge
       // the platform never performs.
       //
       // `send_to` is written after the host's data on purpose: without it,

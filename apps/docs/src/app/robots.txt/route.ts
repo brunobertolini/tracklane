@@ -4,7 +4,7 @@ export const revalidate = false;
 
 /**
  * Everything here is public documentation for an open-source library, so
- * everything is allowed — including the crawlers that train and answer with
+ * everything is allowed, including the crawlers that train and answer with
  * it, which is the point.
  *
  * The `llms.txt` line is the one that matters: it is where a model should

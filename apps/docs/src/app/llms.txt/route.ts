@@ -4,7 +4,7 @@ import { source } from '@/lib/source';
 export const revalidate = false;
 
 const SUMMARY =
-  'One interface between an application and every tool that receives user-behaviour events — GA4, Meta, LinkedIn, PostHog and X, in the browser and through their server-side conversion APIs. Name an event once, in GA4 vocabulary, and it reaches every configured tool. It standardises and organises and never changes behaviour: no consent decisions, no queues, no retries, and it does not install vendor tags.';
+  'One interface between an application and every tool that receives user-behaviour events, in the browser and through their server-side conversion APIs. Name an event once, in GA4 vocabulary, and it reaches every configured tool. GA4 ships today. Meta, LinkedIn, PostHog and X are next. It standardises and organises and never changes behaviour: no consent decisions, no queues, no retries, and it does not install vendor tags.';
 
 /**
  * The index an LLM reads first.

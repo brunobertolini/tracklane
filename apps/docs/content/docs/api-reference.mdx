@@ -3,7 +3,7 @@ title: API reference
 description: Public API, generated from the library source
 ---
 
-Generated from the TSDoc in the library source — these tables cannot drift from the code.
+Generated from the TSDoc in the library source, so these tables cannot drift from the code.
 
 The browser and the server are **two libraries**. They share no runtime and no state: only the
 vocabulary below, which is what makes `purchase` mean the same thing on both sides.
@@ -12,7 +12,7 @@ vocabulary below, which is what makes `purchase` mean the same thing on both sid
 
 ### `EventData`
 
-What the business says happened, spelled the way GA4 spells it. The bag stays open — a business
+What the business says happened, spelled the way GA4 spells it. The bag stays open: a business
 measures things this vocabulary does not name.
 
 <AutoTypeTable path="../../packages/tracklane/src/vocabulary.ts" name="EventData" />
@@ -26,7 +26,7 @@ hashing is a field format each vendor defines, applied inside its adapter.
 
 ### `ConsentState`
 
-Google's signals, adopted verbatim. Every other vendor receives a collapse of these — never an
+Google's signals, adopted verbatim. Every other vendor receives a collapse of these, never an
 expansion. An absent signal produces no key.
 
 <AutoTypeTable path="../../packages/tracklane/src/vocabulary.ts" name="ConsentState" />
@@ -39,11 +39,20 @@ The one diagnostic channel. It never carries event contents.
 
 ## Browser
 
+`createTracking` is the entry point for this half: it takes a `BrowserTrackingOptions` and returns
+a `BrowserTracking`.
+
 ### `TrackOptions`
 
 The only thing the browser needs beyond the event itself.
 
 <AutoTypeTable path="../../packages/tracklane/src/browser.ts" name="TrackOptions" />
+
+### `BrowserTrackingOptions`
+
+What `createTracking` takes: the providers to send to, and an optional error channel.
+
+<AutoTypeTable path="../../packages/tracklane/src/browser.ts" name="BrowserTrackingOptions" />
 
 ### `BrowserTracking`
 
@@ -58,11 +67,27 @@ does not have.
 
 ## Server
 
+`createTracking` is the entry point for this half: it takes a `ServerTrackingOptions` and returns
+a `ServerTracking`.
+
 ### `EventContext`
 
-Who, when and where — everything a conversion API needs beyond the event itself.
+Who, when and where: everything a conversion API needs beyond the event itself.
 
 <AutoTypeTable path="../../packages/tracklane/src/server.ts" name="EventContext" />
+
+### `ResolvedContext`
+
+What an adapter actually receives: `EventContext` with `cookies` parsed into a map and
+`timestamp` resolved to a number.
+
+<AutoTypeTable path="../../packages/tracklane/src/server.ts" name="ResolvedContext" />
+
+### `ServerTrackingOptions`
+
+What `createTracking` takes: the providers to send to, and an optional error channel.
+
+<AutoTypeTable path="../../packages/tracklane/src/server.ts" name="ServerTrackingOptions" />
 
 ### `ServerTracking`
 

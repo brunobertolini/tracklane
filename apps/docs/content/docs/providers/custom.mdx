@@ -3,12 +3,12 @@ title: Writing a provider
 description: The contract, which is the same one the built-in providers use
 ---
 
-Any tool that needs to receive events about what your users do can be a destination — not just ad
-pixels. If it has a notion of `track()`, you can write a provider for it, and you need nothing
-from this repository to do it: no registry entry, no allow-list, no release here.
+Any tool that needs to receive events about what your users do can be a destination, not just ad
+pixels. If it has a notion of `track()`, you can write a provider for it: this repository requires
+no registry entry, no allow-list, and no release to support it.
 
-**The providers shipped with this library use no shortcut yours cannot use.** That is a rule, not
-a courtesy: if the built-in ones needed something private, the contract would be a lie.
+**The providers shipped with this library use no shortcut yours cannot use.** The contract
+enforces this: if the built-in ones needed something private, the contract would be a lie.
 
 ## Browser
 
@@ -25,15 +25,47 @@ export const acme = (siteId: string): BrowserProvider => ({
 });
 ```
 
-`name` must be unique — registering the same vendor twice is a hard error, because there is
+`name` must be unique: registering the same vendor twice is a hard error, because there is
 nothing a second registration could say that the first cannot.
 
 `default` decides what happens to an event you have no mapping for. `passthrough` sends the
 canonical name as-is; `ignore` stays silent. Use `ignore` **only** when your vendor mints event
-identifiers in its own dashboard, so no name could possibly be guessed — that is the case for
+identifiers in its own dashboard, so no name could possibly be guessed. That is the case for
 LinkedIn and X, and it is the only honest reason to send nothing.
 
 `install` runs once, when tracking is created. It may be async, and the core does not wait on it.
+
+### Event names, and refusing to send
+
+`events` maps canonical names to whatever your vendor calls them. A `null` entry means *never send
+this event here*, which is how a host keeps an internal product event out of the ad platforms.
+
+```ts
+export const acme = (siteId: string, events?: Record<string, string | null>): BrowserProvider => ({
+  name: 'acme',
+  default: 'passthrough',
+  events: { purchase: 'Order', internal_debug: null, ...events },
+  track: (name, data) => window.acme?.push(name, data),
+});
+```
+
+Resolution order is your map, then `default`. The name your `track` receives is already resolved,
+so you never look anything up.
+
+### Identity and consent
+
+Both are optional, and you implement them **only if your vendor documents the concept**. Omitting
+one is the honest translation of "this does not exist here", so the core simply skips you.
+
+```ts
+identify: (user, traits) => window.acme?.setUser(user.userId, traits),
+consent: (command, state) => window.acme?.consent(state.ad_storage === 'granted'),
+```
+
+Consent arrives in Google's vocabulary, which is the most granular of the five. Reduce it to what
+your vendor understands: a *collapse* never claims more than the host declared. Expanding one
+coarse signal into several is how a library ends up telling a vendor a visitor agreed to something
+they refused.
 
 ## Server
 
@@ -51,9 +83,14 @@ export const acme = (apiKey: string): ServerProvider => ({
 });
 ```
 
-Throw when the send failed — the dispatcher isolates it, reports it, and the other providers are
+Throw when the send failed: the dispatcher isolates it, reports it, and the other providers are
 unaffected. Use `report` for something the caller should know about a request that **already
 succeeded**; throwing there would tell a retry loop to resend a delivered conversion.
+
+The `context` you receive is already resolved: cookies parsed into a map, `timestamp` as epoch
+milliseconds whatever the caller passed. It carries `user`, `cookies`, `dedupId`, `timestamp`,
+`source`, `url`, `ip`, `userAgent`, `traits` and `consent`. Take what your vendor documents and
+ignore the rest. See the [API reference](/docs/api-reference/) for the full shape.
 
 ## Three rules worth following
 
@@ -62,9 +99,9 @@ send nothing. A made-up destination looks mapped and arrives nowhere, which is w
 honest absence.
 
 **Never put payload contents in an error.** Events carry raw personal data by design. Report the
-status, the event name and the vendor — never the body.
+status, the event name and the vendor. Do not report the body.
 
 **Buffer for yourself if your SDK needs it.** Every vendor shipped here queues its own commands
 until its script loads, so the core holds no queue for anyone. If yours arrives through a promise
-or a React context, keep your own list and replay it — a `track` that returns silently because
+or a React context, keep your own list and replay it: a `track` that returns silently because
 the client is not ready yet is a defect in the provider, not a gap in the core.

@@ -6,7 +6,7 @@ description: Requirements and install commands
 ## Requirements
 
 - Node.js `>=22.14.0`
-- An ESM project (`"type": "module"`) or a bundler. The package ships ESM only —
+- An ESM project (`"type": "module"`) or a bundler. The package ships ESM only.
   CommonJS consumers need a dynamic `import()`.
 
 ## Install
@@ -25,15 +25,15 @@ bun add tracklane
 
 ## Two entry points
 
-The browser and the server are two libraries. They share no code and no state — only the
+The browser and the server are two libraries. They share no code and no state, only the
 vocabulary, which is what makes `purchase` mean the same thing on both sides. Import from the one
 you are in:
 
 | Import from | Where |
 | --- | --- |
-| `tracklane/browser` | In the browser. Loads each vendor's tag and calls its SDK. |
+| `tracklane/browser` | In the browser. Calls the vendor tags already on your page. |
 | `tracklane/server` | On your server. Calls each vendor's conversion API. |
-| `tracklane` | Types only — for writing your own provider. |
+| `tracklane` | Types only, for writing your own provider. Has no runtime. |
 
 Importing the server entry point into client code would pull Node built-ins into your bundle,
 which is why they are separate.
@@ -41,7 +41,7 @@ which is why they are separate.
 ## Vendor tags go on the page
 
 This library **does not install vendor tags**. Each tag belongs on your page, put there the way
-its vendor documents — a snippet or a tag manager. We talk to the tag that is already there.
+its vendor documents: a snippet or a tag manager. We talk to the tag that is already there.
 
 That is deliberate: injecting a third-party script is a decision about your content-security
 policy and your page weight, and a vendor's own configuration command emits a page view, so
@@ -69,6 +69,48 @@ is there with a `204`, the tag is wired up.
 
 <Callout type="warn">
   A `204` means Google received the request, not that the event will appear in a report. Google
-  answers `204` to payloads it discards — including anything sent from a headless browser, which
+  answers `204` to payloads it discards, including anything sent from a headless browser, which
   it treats as a bot. Confirm in the Realtime report, not in the network tab.
 </Callout>
+
+## Where to put it
+
+`createTracking` returns plain functions and holds no state beyond the standing identity in the
+browser. Create it **once, at module scope**, and import the functions where you need them:
+
+```ts
+// lib/tracking.ts
+import { createTracking, ga4 } from 'tracklane/browser';
+
+export const { track, identify, consent } = createTracking({
+  providers: [ga4('G-XXXXXXX')],
+  onError: (error) => console.error(error),
+});
+```
+
+On the server, do the same, but never carry user data across calls. A server instance is shared
+by every request, so identity travels with each `track`, never in the instance. That is why the
+server has no `identify`.
+
+## Errors
+
+Nothing throws at the call site. One vendor failing must not break a checkout. Everything arrives
+through `onError`:
+
+```ts
+onError: (error) => {
+  // error.provider  which vendor
+  // error.event     which event
+  // error.severity  'error': it did not arrive
+  //                 'warning': it arrived, but something is worth knowing
+  // error.message   what happened. Never the payload.
+  report(error);
+};
+```
+
+The `warning` level exists because some vendors accept an event and then do nothing useful with
+it. Those are the cases you want to see; without them, the only symptom is a report that stays
+empty.
+
+Diagnostics never carry event contents. Events hold personal data by design, so piping `onError`
+straight to your logger cannot leak an email address.

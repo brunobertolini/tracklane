@@ -1,5 +1,5 @@
 /**
- * Types only — the vocabulary shared by both libraries, plus the two
+ * Types only: the vocabulary shared by both libraries, plus the two
  * provider contracts.
  *
  * The runtime lives behind `tracklane/browser` and

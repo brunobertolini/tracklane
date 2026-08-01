@@ -21,15 +21,16 @@ import type {
  * is, when it happened, and where it was observed.
  *
  * None of this is "what happened", which is why it does not travel in the
- * event data — putting it there would leak identity into the pass-through
+ * event data: putting it there would leak identity into the pass-through
  * event params of the vendors that forward the payload as-is.
  */
 export interface EventContext {
+  /** The person's identity, the server-side counterpart to `identify()` on the browser. */
   user?: UserData;
   /**
    * The request's raw `Cookie` header, or an already-parsed map.
    *
-   * These are cookies the vendors' own browser tags set — this library never
+   * These are cookies the vendors' own browser tags set. This library never
    * writes one. On the server each adapter reads the cookies belonging to
    * its own vendor: Meta forwards its value as-is, Google's holds several
    * things at once and has to be opened. That knowledge lives in the
@@ -52,8 +53,11 @@ export interface EventContext {
   timestamp?: number | Date;
   /** Overrides the factory default. Meta requires it on every event. */
   source?: ActionSource;
+  /** The page the conversion happened on. Meta's Conversions API reads it as `event_source_url`. */
   url?: string;
+  /** The visitor's IP. Meta's Conversions API reads it as one of the identifiers in `user_data`. */
   ip?: string;
+  /** The visitor's user agent. Meta's Conversions API reads it alongside `ip`. */
   userAgent?: string;
   /** What is known *about* the person: GA4 user properties, PostHog `$set`. */
   traits?: Record<string, unknown>;
@@ -67,6 +71,7 @@ export interface EventContext {
 
 /** The context an adapter receives, with the ambiguity resolved. */
 export interface ResolvedContext extends Omit<EventContext, 'cookies' | 'timestamp'> {
+  /** The request's cookies, already split into a `name → value` map. */
   cookies: Record<string, string>;
   /** Epoch milliseconds. Adapters convert to their vendor's spelling. */
   timestamp: number;
@@ -75,18 +80,22 @@ export interface ResolvedContext extends Omit<EventContext, 'cookies' | 'timesta
 /**
  * A destination for server events.
  *
- * `track` may throw — on a non-2xx, or where a vendor documents a
+ * `track` may throw, on a non-2xx or where a vendor documents a
  * precondition the event cannot meet. The dispatcher isolates and reports
  * it, so adapters stay honest and loud.
  *
- * `report` is for a caveat about a request that already succeeded. It is
- * never a throw: by then the send happened, and throwing would tell a host's
+ * `report` is for a caveat about a request that already succeeded. It does
+ * not throw: by then the send happened, and throwing would tell a host's
  * retry logic to resend a delivered conversion.
  */
 export interface ServerProvider<Target = string> {
+  /** The vendor's fixed name. Registering one twice is an error. */
   name: string;
+  /** What happens to a canonical event this vendor has no binding for. */
   default: ProviderDefault;
+  /** How this vendor spells each canonical event. */
   events?: Record<string, EventBinding<Target>>;
+  /** Sends one event to this vendor's conversion API. May throw, or call `report` for a caveat. */
   track(
     name: Target,
     data: EventData,
@@ -97,7 +106,12 @@ export interface ServerProvider<Target = string> {
 
 /** Options accepted by {@link createTracking}. */
 export interface ServerTrackingOptions {
+  /** The vendors to send every event to. Registering the same `name` twice throws. */
   providers: readonly ServerProvider[];
+  /**
+   * The one diagnostic channel. Without it the library is silent, exactly as
+   * a hand-written vendor call is.
+   */
   onError?: (error: TrackingError) => void;
 }
 
@@ -114,7 +128,7 @@ export interface ServerTracking {
   track(name: string, data?: EventData, context?: EventContext): Promise<void>;
 }
 
-/** `name=value; name=value` — the shape of a `Cookie` header. */
+/** `name=value; name=value`, the shape of a `Cookie` header. */
 function parseCookies(
   cookies: string | Record<string, string> | null | undefined,
 ): Record<string, string> {
@@ -143,7 +157,7 @@ function parseCookies(
  * one visitor to another visitor's conversion. Identity travels with the
  * call, which is also what every conversion API expects.
  *
- * There is no `consent` call either — consent commands are properties of a
+ * There is no `consent` call either. Consent commands are properties of a
  * vendor's on-page tag, and a server request has no tag. The one vendor that
  * accepts consent server-side reads it from the context.
  *

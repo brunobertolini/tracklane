@@ -7,11 +7,12 @@
 
 > One interface between your application and every tool that receives events.
 
-Name an event once, in GA4's vocabulary, and it reaches every tool you configured — in the
+Name an event once, in GA4's vocabulary, and it reaches every tool you configured, in the
 browser and through their server-side conversion APIs. Adding a tool is a line of configuration
 instead of a diff across your whole application.
 
 ```ts
+// in the browser
 import { createTracking, ga4 } from 'tracklane/browser';
 
 const { track } = createTracking({ providers: [ga4('G-XXXXXXX')] });
@@ -19,69 +20,50 @@ const { track } = createTracking({ providers: [ga4('G-XXXXXXX')] });
 track('purchase', { transaction_id: 'T-1', value: 49.9, currency: 'BRL' });
 ```
 
+```ts
+// on your server, where the conversion APIs live
+import { createTracking, ga4 } from 'tracklane/server';
+
+const { track } = createTracking({
+  providers: [ga4({ measurementId: 'G-XXXXXXX', apiSecret })],
+});
+
+await track('purchase', order, { cookies: request.headers.get('cookie') });
+```
+
 It standardises and organises, and it never changes behaviour: no consent decisions, no queues,
-no retries, no opinion about what you should measure. Whatever a tool receives is what it would
-have received from a hand-written call.
+no retries, no vendor tags injected into your page, no opinion about what you should measure.
+Whatever a tool receives is what it would have received from a hand-written call.
 
-**Documentation:** https://brunobertolini.github.io/tracklane
+**GA4** ships today. **Meta, LinkedIn, PostHog and X** are next. Any tool that receives
+events about what your users do can be a destination, using the same public contract.
 
-## Repository layout
-
-| Path            | What it is                                              |
-| --------------- | ------------------------------------------------------- |
-| `packages/tracklane`  | The published library (`tracklane`), ESM-only |
-| `apps/docs`     | Documentation site (Fumadocs, static export)            |
-| `docs/decisions`| Architecture Decision Records                            |
-
-## First-time setup
-
-The repository ships with placeholder names. To claim it:
-
-```bash
-pnpm setup
-```
-
-It asks for the npm package name, GitHub owner/repo, author and docs domain, then
-rewrites every place they appear — manifests, docs site, workflows, changesets config,
-CODEOWNERS, FUNDING, README — renames `packages/<name>`, and writes a `CNAME` (or keeps
-the GitHub Pages base path) depending on your answer about the domain.
-
-```bash
-pnpm setup -- --dry-run                        # preview, writes nothing
-pnpm setup -- --name @scope/x --owner me --yes # non-interactive
-```
-
-It is safe to run again later to rename the project. The ADR under `docs/decisions/`
-is left untouched on purpose — it records what was decided at the time.
-
-## Development
-
-```bash
-pnpm install
-pnpm dev          # docs site at https://tracklane-docs.localhost
-pnpm test         # unit + type tests
-pnpm check        # everything CI runs
-```
-
-Requires pnpm 10 (`corepack enable` or a global install). The library targets Node
-`>=22.14.0`; local development uses Node 24 (see `.nvmrc`) because `portless` requires it.
-
-`pnpm dev` runs the docs server through [portless](https://www.npmjs.com/package/portless),
-which gives it a stable HTTPS name instead of a port. In a git worktree the name is
-prefixed with the branch, so several worktrees run at the same time without colliding:
-
-| Where              | URL                                          |
-| ------------------ | -------------------------------------------- |
-| main checkout      | `https://tracklane-docs.localhost`                 |
-| worktree `feat/x`  | `https://feat-x.tracklane-docs.localhost`          |
-
-No configuration: the name comes from the package name and the prefix from the branch.
-Use `pnpm --filter tracklane-docs dev:raw` to bypass portless and bind a plain port.
+**Documentation:** https://tracklane.codar.me · **npm:** https://www.npmjs.com/package/tracklane
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md). Every user-facing change needs a changeset
-(`pnpm changeset`); releases are published from `main` with npm trusted publishing.
+```bash
+pnpm install
+pnpm dev      # documentation site
+pnpm check    # everything CI runs: lint, types, tests, build, package validation
+```
+
+Requires pnpm 10 and Node 24 locally (see `.nvmrc`); the published library targets Node
+`>=22.14.0`.
+
+Every user-facing change needs a changeset (`pnpm changeset`). Releases publish from `main`
+through npm trusted publishing, so no token lives in this repository.
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the rest, and [AGENTS.md](./AGENTS.md) for how the
+library is meant to be extended. It holds the rule that settles design arguments and the list
+of decisions that are closed.
+
+| Path                  | What it is                                    |
+| --------------------- | --------------------------------------------- |
+| `packages/tracklane`  | The published library, ESM-only               |
+| `apps/docs`           | Documentation site (Fumadocs, static export)  |
+| `docs/decisions`      | Architecture Decision Records                 |
+| `docs/research`       | What each vendor actually requires            |
 
 ## License
 

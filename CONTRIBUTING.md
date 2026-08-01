@@ -9,7 +9,7 @@ as pull requests.
 pnpm install
 ```
 
-pnpm 10 — the pinned version lives in `packageManager`, so `corepack enable` is enough.
+pnpm 10. The pinned version lives in `packageManager`, so `corepack enable` is enough.
 The library targets Node `>=22.14.0`; use Node 24 locally (`.nvmrc`), which is what
 `portless` requires.
 
@@ -25,7 +25,7 @@ plain `localhost:3000`.
 | `pnpm dev`          | Docs site at `https://tracklane-docs.localhost` (portless)  |
 | `pnpm test`         | Unit tests and type tests (Vitest)                  |
 | `pnpm typecheck`    | `tsc --noEmit` in every workspace                   |
-| `pnpm lint:fix`     | Biome — lint, format and import sorting             |
+| `pnpm lint:fix`     | Biome (lint, format and import sorting)             |
 | `pnpm package:check`| `publint` + `attw` against the real tarball         |
 | `pnpm check`        | Everything CI runs                                  |
 
@@ -36,11 +36,11 @@ There are no git hooks: CI is the source of truth. Run `pnpm check` before pushi
 1. Branch off `develop`.
 2. Add tests for behaviour changes. Public API changes also need a type test
    (`*.test-d.ts`).
-3. Run `pnpm changeset` and commit the generated file — it declares the semver
+3. Run `pnpm changeset` and commit the generated file. It declares the semver
    bump and writes the changelog entry. Docs-only and CI-only changes can skip it.
 4. Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
-   (`feat:`, `fix:`, `docs:`, `chore:`). This is a convention, not an enforced gate —
-   the release bump comes from your changeset, not from the commit message.
+   (`feat:`, `fix:`, `docs:`, `chore:`). This is a convention: the release bump comes
+   from your changeset, not the commit message.
 
 ## Code style
 

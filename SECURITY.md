@@ -15,8 +15,8 @@ published with credit unless you prefer otherwise.
 
 ## Supply chain
 
-Releases are published from GitHub Actions using npm trusted publishing (OIDC) —
-no long-lived npm tokens exist for this project. Every published version carries
+Releases are published from GitHub Actions using npm trusted publishing (OIDC).
+No long-lived npm tokens exist for this project. Every published version carries
 provenance attestation, verifiable with:
 
 ```bash

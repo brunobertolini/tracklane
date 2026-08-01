@@ -26,7 +26,7 @@ describe('createTracking (server)', () => {
 
   it('waits for every provider before resolving', async () => {
     // Serverless runtimes kill un-awaited work, so the request has to
-    // survive — which is what awaiting buys, not a delivery guarantee.
+    // survive. Awaiting buys that survival, not a delivery guarantee.
     let settled = false;
     const slow = vi.fn(async () => {
       await new Promise((resolve) => setTimeout(resolve, 5));

@@ -10,7 +10,7 @@ interface Resolvable<Target> {
 /**
  * Registering one vendor twice is a hard error rather than a merge: there is
  * nothing a second registration could say that the first cannot, and
- * accepting both would double every event to that vendor — a defect that
+ * accepting both would double every event to that vendor, a defect that
  * surfaces weeks later as inflated conversions.
  */
 export function assertUniqueProviders(providers: readonly { name: string }[]): void {

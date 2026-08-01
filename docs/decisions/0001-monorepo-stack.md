@@ -205,8 +205,10 @@ tsup/ESLint/husky), `llms.txt` (from the template), CodeQL and OpenSSF Scorecard
    nothing and costs every consumer a prefix. The `@tracklane` org is reserved for satellites —
    a CMP preset, framework helpers — which is what a scope is actually for.
 2. ~~**The library's real description and API.**~~ Settled: the placeholders are gone.
-3. **Custom domain for the docs.** With a domain of its own, `basePath` disappears — delete
-   the `env:` block from `docs.yml` and adjust `siteUrl` in `apps/docs/src/lib/shared.ts`.
+3. ~~**Custom domain for the docs.**~~ **Settled 2026-07-31: `tracklane.codar.me`.** The
+   `basePath` is gone, `siteUrl` points at the domain, and `apps/docs/public/CNAME` carries it
+   into the build. The GitHub Pages address is not kept working: one canonical address is worth
+   more than a redirect nobody audits.
 4. **First publish.** The trusted publisher is configured per package on npmjs.com and the
    package must exist first. Sequence: manual publish of 0.1.0 → configure the trusted
    publisher pointing at `release.yml` → subsequent releases go out over OIDC.

@@ -84,7 +84,7 @@ describe('ga4 server', () => {
   it('reads the session of its own property, not whichever came first', async () => {
     // A page with a marketing property and a product property has two of
     // these cookies. Sending the other one's session is accepted by Google
-    // and matches nothing — the vendor's worst failure mode.
+    // and matches nothing, the vendor's worst failure mode.
     const ctx = context({
       cookies: {
         _ga: 'GA1.1.1234567890.1700000000',
@@ -129,7 +129,7 @@ describe('ga4 server', () => {
   });
 
   it('warns loudly when the session is missing but still sends', async () => {
-    // Google accepts the event and then shows it in no report at all —
+    // Google accepts the event and then shows it in no report at all,
     // the worst failure mode of the five vendors, and invisible without this.
     const report = vi.fn();
     const ctx = context({ cookies: { _ga: 'GA1.1.1234567890.1700000000' } });
@@ -162,7 +162,7 @@ describe('ga4 server', () => {
 
   it('sends the user id and wraps person properties the way this endpoint wants', async () => {
     // Verified against Google's validation endpoint on 2026-07-31: a bare
-    // value here is rejected as invalid — while the collection endpoint
+    // value here is rejected as invalid, while the collection endpoint
     // answers 204 and silently drops it.
     const ctx = context({ user: { userId: 'u-1' }, traits: { plan: 'pro', seats: 3 } });
 

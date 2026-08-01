@@ -22,7 +22,7 @@ import type {
 export interface TrackOptions {
   /**
    * The value that lets a vendor recognise this hit and a server-side hit as
-   * one event. The library never invents it — the browser and the server do
+   * one event. The library never invents it: the browser and the server do
    * not share a process, so only a value the host already owns (an order id)
    * can match on both sides.
    */
@@ -32,8 +32,8 @@ export interface TrackOptions {
 /**
  * A destination for browser events.
  *
- * This is the whole contract, and it is what a provider written outside this
- * package implements — the ones shipped here get no shortcut.
+ * This is the whole contract. A provider written outside this package
+ * implements it exactly as the providers shipped here do.
  */
 export interface BrowserProvider<Target = string> {
   /** The vendor's fixed name. Registering one twice is an error. */
@@ -44,6 +44,7 @@ export interface BrowserProvider<Target = string> {
   events?: Record<string, EventBinding<Target>>;
   /** Loads the vendor tag. Runs once, at creation. */
   install?(): void | Promise<void>;
+  /** Sends one event to this vendor. Throwing here reaches `onError`, not the caller. */
   track(name: Target, data: EventData, options: TrackOptions): void;
   /** Absent where the vendor keeps no user of its own. */
   identify?(user: UserData, traits?: Record<string, unknown>): void;
@@ -53,6 +54,7 @@ export interface BrowserProvider<Target = string> {
 
 /** Options accepted by {@link createTracking}. */
 export interface BrowserTrackingOptions {
+  /** The vendors to send every event to. Registering the same `name` twice throws. */
   providers: readonly BrowserProvider[];
   /**
    * The one diagnostic channel. Without it the library is silent, exactly as
@@ -107,7 +109,7 @@ export function createTracking(options: BrowserTrackingOptions): BrowserTracking
     try {
       const installing = provider.install?.();
       // An async loader that rejects would otherwise become an unhandled
-      // rejection — the silent failure this channel exists to prevent.
+      // rejection, the silent failure this channel exists to prevent.
       void Promise.resolve(installing).catch((cause: unknown) => {
         fail(provider.name, 'install', cause);
       });

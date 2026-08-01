@@ -1,19 +1,15 @@
-import { createGenerator } from 'fumadocs-typescript';
-import { AutoTypeTable } from 'fumadocs-typescript/ui';
+import { TypeTable } from 'fumadocs-ui/components/type-table';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import type { MDXComponents } from 'mdx/types';
-import type { ComponentProps } from 'react';
-
-const generator = createGenerator();
 
 export function getMDXComponents(components?: MDXComponents) {
   return {
     ...defaultMdxComponents,
-    // Renders a type table straight from the library's TSDoc, so the API
-    // reference cannot drift from the source.
-    AutoTypeTable: (props: Omit<ComponentProps<typeof AutoTypeTable>, 'generator'>) => (
-      <AutoTypeTable generator={generator} {...props} />
-    ),
+    // `remarkAutoTypeTable` (wired in `lib/source.ts`) expands every
+    // `<AutoTypeTable path="..." name="..." />` into this component at build
+    // time, straight from the library's TSDoc, so the table cannot drift
+    // from the source, and there is no per-request codegen pass.
+    TypeTable,
     ...components,
   } satisfies MDXComponents;
 }

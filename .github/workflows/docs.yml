@@ -26,10 +26,8 @@ jobs:
       - uses: actions/configure-pages@v6
       - run: pnpm install --frozen-lockfile
       - name: Build docs
-        # Project pages are served from /<repo>; drop this when a custom
-        # domain is configured (see docs/decisions/0001-monorepo-stack.md).
-        env:
-          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+        # Served from the root of tracklane.codar.me, so no base path. The
+        # `public/CNAME` file is what tells Pages which domain this is.
         run: pnpm build --filter=tracklane-docs...
       - uses: actions/upload-pages-artifact@v5
         with:
