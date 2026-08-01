@@ -1,4 +1,4 @@
 {
   "title": "Documentation",
-  "pages": ["index", "installation", "providers", "comparison", "api-reference"]
+  "pages": ["index", "installation", "providers", "consent", "comparison", "api-reference"]
 }
