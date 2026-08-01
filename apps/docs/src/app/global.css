@@ -6,6 +6,167 @@ html {
   scrollbar-gutter: stable;
 }
 
+/*
+ * The home page.
+ *
+ * It commits to dark, where the rest of the site follows the reader's theme.
+ * The commitment is the design: the hero is a light source on black, and the
+ * same layout in light is a different, duller page. The scope is one class on
+ * one route, so the docs keep their toggle.
+ *
+ * `.dark` is Fumadocs' own switch and it works from any ancestor, because all
+ * it does is redeclare custom properties that inherit.
+ */
+.tl-home {
+  color-scheme: dark;
+
+  /* The one brand decision in here. Change this line, change the page. */
+  --tl-accent: hsl(19, 88%, 58%);
+}
+
+/*
+ * The light behind the hero: a beam crossing the top right, the diagonals it
+ * throws, and the core it comes from. Decoration only, so it is inert to
+ * pointers and invisible to assistive technology.
+ */
+.tl-glow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/*
+ * Where the light comes from. Every part of the effect is anchored to this one
+ * point, because a beam whose brightest spot is not on the beam reads as two
+ * unrelated decorations rather than one light.
+ */
+.tl-glow {
+  --tl-glow-x: 78%;
+  --tl-glow-y: 38%;
+  --tl-glow-angle: -33deg;
+}
+
+/*
+ * The lines are drawn twice.
+ *
+ * A single copy has to be either faint enough to sit behind the headline or
+ * bright enough to read as light near the beam, and it cannot be both. So one
+ * copy covers the whole hero at a level you feel rather than see, and a second
+ * copy lights up only where the beam is.
+ */
+.tl-glow::before,
+.tl-glow__rays {
+  content: "";
+  position: absolute;
+  /* Inset 0, so every mask percentage below is a percentage of the hero and
+     means what it looks like it means. */
+  inset: 0;
+  background: repeating-linear-gradient(
+    calc(90deg + var(--tl-glow-angle)),
+    transparent 0 43px,
+    color-mix(in oklab, var(--tl-accent) 62%, transparent) 43px 44px
+  );
+}
+
+/*
+ * The base copy. It fades at the top so it does not fight the navigation, and
+ * at the bottom so the hero ends in a fade rather than a straight edge where
+ * the section stops.
+ */
+.tl-glow::before {
+  mask-image: linear-gradient(to bottom, transparent 2%, #000 22%, #000 72%, transparent 99%);
+  opacity: 0.22;
+}
+
+/* The bright copy, which exists only around the light. */
+.tl-glow__rays {
+  mask-image: radial-gradient(46% 54% at 74% 40%, #000 5%, transparent 72%);
+  opacity: 0.5;
+}
+
+.tl-glow__origin {
+  position: absolute;
+  top: var(--tl-glow-y);
+  left: var(--tl-glow-x);
+  translate: -50% -50%;
+  rotate: var(--tl-glow-angle);
+}
+
+.tl-glow__beam {
+  position: absolute;
+  width: 76rem;
+  height: 2px;
+  translate: -50% -50%;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 4%,
+    color-mix(in oklab, var(--tl-accent) 55%, transparent) 30%,
+    color-mix(in oklab, var(--tl-accent) 45%, white) 46%,
+    #fff 50%,
+    color-mix(in oklab, var(--tl-accent) 45%, white) 54%,
+    color-mix(in oklab, var(--tl-accent) 55%, transparent) 70%,
+    transparent 96%
+  );
+}
+
+/* The same beam again, wider and blurred: what makes it look like light rather
+   than a drawn line. Kept narrow, because past a certain width it stops being
+   a glow and becomes fog. */
+.tl-glow__beam--haze {
+  height: 4rem;
+  filter: blur(22px);
+  opacity: 0.32;
+}
+
+.tl-glow__core {
+  position: absolute;
+  width: 13rem;
+  height: 13rem;
+  translate: -50% -50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--tl-accent) 55%, white),
+    var(--tl-accent) 30%,
+    transparent 70%
+  );
+  filter: blur(26px);
+  opacity: 0.42;
+}
+
+/*
+ * The fan-out cascade, played once on load rather than on a loop. The panel is
+ * above the fold, so it is seen; a hero that never stops moving is a hero that
+ * has to be scrolled past.
+ */
+@keyframes tl-fan-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tl-panel {
+  animation: tl-fan-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.tl-fan-row {
+  animation: tl-fan-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(320ms + var(--tl-fan-index) * 110ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-panel,
+  .tl-fan-row {
+    animation: none;
+  }
+}
+
 html > body[data-scroll-locked] {
   margin-right: 0px !important;
   --removed-body-scroll-bar-size: 0px !important;

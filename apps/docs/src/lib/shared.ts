@@ -9,6 +9,17 @@ export const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 export const siteUrl = 'https://tracklane.codar.me';
 
+export const authorName = 'Bruno Bertolini';
+
+/**
+ * Where the author actually is, rather than where a byline usually points.
+ *
+ * No campaign parameters: nobody on the receiving end can read them here, and
+ * a parameter no report will ever show is noise in the address bar and a
+ * promise of measurement that is not kept.
+ */
+export const authorUrl = 'https://x.com/brunobertolini';
+
 export const gitConfig = {
   user: 'brunobertolini',
   repo: 'tracklane',
