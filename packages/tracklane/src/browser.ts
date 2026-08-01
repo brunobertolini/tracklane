@@ -42,7 +42,13 @@ export interface BrowserProvider<Target = string> {
   default: ProviderDefault;
   /** How this vendor spells each canonical event. */
   events?: Record<string, EventBinding<Target>>;
-  /** Loads the vendor tag. Runs once, at creation. */
+  /**
+   * Loads the vendor tag, at creation.
+   *
+   * **Make it idempotent.** A host that rebuilds its tracking, as
+   * `@tracklane/consent` does on every consent answer, creates again and
+   * installs again, including providers that were already there.
+   */
   install?(): void | Promise<void>;
   /** Sends one event to this vendor. Throwing here reaches `onError`, not the caller. */
   track(name: Target, data: EventData, options: TrackOptions): void;

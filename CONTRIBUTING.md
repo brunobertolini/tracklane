@@ -50,8 +50,14 @@ everything theirs can. `docs/decisions/0004-how-a-provider-gets-in.md` records w
 requirements below exist.
 
 Three of them the build checks for you: a provider may only import what the package
-exports publicly, the shared conformance suite covers the behaviour the types cannot
-express, and the declared provider list must match the source.
+exports publicly, the shared conformance suite covers behaviour the types cannot
+express, and the declared provider list must match the source. The conformance
+suite covers less than ADR-0004 describes today; the rest is still tested per
+provider, and moves into the suite when a second provider makes it worth sharing.
+
+One thing it will check that is easy to miss: `install` must be idempotent. A host
+that rebuilds its tracking, as `@tracklane/consent` does on every consent answer,
+creates again and installs again.
 
 The fourth is on you, and it is the one that matters most. **A provider is not merged
 without evidence that its events arrived.** These vendors fail by accepting: a `204`

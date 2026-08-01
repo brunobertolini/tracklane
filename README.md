@@ -35,6 +35,11 @@ It standardises and organises, and it never changes behaviour: no consent decisi
 no retries, no vendor tags injected into your page, no opinion about what you should measure.
 Whatever a tool receives is what it would have received from a hand-written call.
 
+Deciding which tools may run at all is your application's, and
+[`@tracklane/consent`](https://tracklane.codar.me/docs/consent/) is there when you want help doing
+it: it holds the visitor's answer, and a companion package surveys what a jurisdiction requires.
+Both live outside the library, and the library never learns they exist.
+
 **GA4** ships today. **Meta, LinkedIn, PostHog and X** are next. Any tool that receives
 events about what your users do can be a destination, using the same public contract.
 
@@ -58,12 +63,14 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the rest, and [AGENTS.md](./AGENTS.
 library is meant to be extended. It holds the rule that settles design arguments and the list
 of decisions that are closed.
 
-| Path                  | What it is                                    |
-| --------------------- | --------------------------------------------- |
-| `packages/tracklane`  | The published library, ESM-only               |
-| `apps/docs`           | Documentation site (Fumadocs, static export)  |
-| `docs/decisions`      | Architecture Decision Records                 |
-| `docs/research`       | What each vendor actually requires            |
+| Path                       | What it is                                        |
+| -------------------------- | ------------------------------------------------- |
+| `packages/tracklane`       | The library, ESM-only                             |
+| `packages/consent`         | Holds the visitor's consent answer                |
+| `packages/consent-rules`   | What a jurisdiction requires, as dated data       |
+| `apps/docs`                | Documentation site (Fumadocs, static export)      |
+| `docs/decisions`           | Architecture Decision Records                     |
+| `docs/research`            | What each vendor actually requires                |
 
 ## License
 

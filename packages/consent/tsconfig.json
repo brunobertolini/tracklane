@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "isolatedDeclarations": true,
+    "noEmit": true,
+    // `./browser` and `./tracklane` read `document.cookie`. Only the
+    // type-checker needs the DOM lib: the published bundle stays
+    // platform-neutral, and the entry point a host imports is what keeps
+    // browser and server code apart at runtime.
+    "lib": ["es2023", "dom"],
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "*.config.ts"]
+}

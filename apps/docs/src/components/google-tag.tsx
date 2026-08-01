@@ -4,27 +4,34 @@ import { ga4MeasurementId } from '@/lib/analytics';
 /**
  * The consent declaration and the property configuration, in one block, in
  * that order, because Google requires the declaration before any measurement.
+ * This runs before `@tracklane/consent` or any other module of this bundle
+ * does (ADR-0006, "The initial declaration stays in the page"), so it reads
+ * the cookie by hand rather than through the library.
  *
- * Everything is denied, including analytics, and nothing here ever grants it.
- * There is no way to ask on this site yet, and a declaration that claims a
- * permission nobody gave is the one thing worse than measuring less: the tag
- * runs cookieless, counts page views without storing anything on the device,
- * and the numbers are modelled rather than exact. That is the honest reading
- * of a site with no question on it.
+ * `tl_consent` is `cookieStorage`'s default name, fixed as public contract by
+ * the same ADR, and the format is `name:decision` pairs joined by `|` — no
+ * encoding, so a plain regex reads it.
  *
- * The advertising signals are denied because this site runs no ads, which is
- * a fact about the site rather than an answer standing in for a visitor's.
+ * Analytics defaults to denied unless the cookie explicitly grants it,
+ * mirroring this site's own consent region (`consentRegion` in
+ * `lib/analytics.ts`): opt-in, nothing measured until asked.
+ *
+ * The advertising signals are always denied, cookie or not. This site runs no
+ * ads, the banner never offers a choice about them, and a declaration that
+ * claimed a permission nobody was ever asked for is the one thing worse than
+ * measuring less.
  */
 function inlineTag(measurementId: string): string {
   return `
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
+var c = (document.cookie.match(/(?:^|; )tl_consent=([^;]*)/) || [])[1] || '';
 gtag('consent', 'default', {
   ad_storage: 'denied',
   ad_user_data: 'denied',
   ad_personalization: 'denied',
-  analytics_storage: 'denied'
+  analytics_storage: c.includes('analytics:granted') ? 'granted' : 'denied'
 });
 gtag('config', ${JSON.stringify(measurementId)});
 `.trim();
