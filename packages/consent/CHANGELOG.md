@@ -1,5 +1,12 @@
 # @tracklane/consent
 
+## 1.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`99b7390`](https://github.com/brunobertolini/tracklane/commit/99b73900be51c7275a1b29f31f7f2e6cdcb178ad)]:
+  - tracklane@0.2.0
+
 ## 0.2.0
 
 ### Minor Changes
