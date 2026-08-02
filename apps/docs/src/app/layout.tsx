@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { GoogleTag } from '@/components/google-tag';
 import { Provider } from '@/components/provider';
-import { appName, basePath, siteUrl } from '@/lib/shared';
+import { appName, basePath, openGraphDefaults, siteUrl, twitterDefaults } from '@/lib/shared';
 import './global.css';
 
 const inter = Inter({
@@ -17,6 +17,8 @@ export const metadata: Metadata = {
     template: `%s · ${appName}`,
   },
   description: 'Documentation for the tracklane TypeScript library',
+  openGraph: openGraphDefaults,
+  twitter: twitterDefaults,
   icons: {
     icon: `${basePath}/favicon.svg`,
   },

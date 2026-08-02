@@ -1,6 +1,13 @@
 export const appName = 'tracklane';
 export const docsRoute = '/docs';
 export const docsImageRoute = '/og/docs';
+
+/**
+ * The home page's card. A route ending in `.png` so the exported file does
+ * too: GitHub Pages types by extension, and a crawler sent
+ * `application/octet-stream` shows no image at all.
+ */
+export const homeImageRoute = '/og/home.png';
 export const docsContentRoute = '/llms.mdx/docs';
 
 // Must mirror `basePath` in next.config.mjs. Assets fetched at runtime (the
@@ -37,3 +44,28 @@ export const gitConfig = {
   repo: 'tracklane',
   branch: 'main',
 };
+
+/**
+ * The social tags every page repeats, and why they are repeated rather than
+ * inherited.
+ *
+ * Next does not deep-merge `openGraph` or `twitter`: a page that declares
+ * either one replaces its layout's copy whole. So a page setting only a
+ * description silently drops the site name and the card type along with it.
+ * Spreading these is the only way both survive.
+ *
+ * They are not decoration. Without `type` and `siteName`, Facebook treats the
+ * card as incomplete and falls back to a generic one; without
+ * `summary_large_image`, X renders the thumbnail beside the text instead of
+ * the image we drew, so the image may as well not exist.
+ */
+export const openGraphDefaults = {
+  type: 'website',
+  siteName: appName,
+  url: siteUrl,
+} as const satisfies { type: 'website'; siteName: string; url: string };
+
+export const twitterDefaults = {
+  card: 'summary_large_image',
+  creator: '@brunobertolini',
+} as const satisfies { card: 'summary_large_image'; creator: string };

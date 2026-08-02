@@ -6,7 +6,15 @@ import { CodeBlock } from '@/components/code-block';
 import { Cta } from '@/components/cta';
 import { FanOut } from '@/components/fan-out';
 import { readmeExamples, readmeTagline } from '@/lib/readme';
-import { appName, gitConfig, siteUrl } from '@/lib/shared';
+import {
+  appName,
+  basePath,
+  gitConfig,
+  homeImageRoute,
+  openGraphDefaults,
+  siteUrl,
+  twitterDefaults,
+} from '@/lib/shared';
 
 // Runs the published API at build time: if the library breaks, this build
 // breaks with it. Zero providers means zero network calls.
@@ -15,11 +23,24 @@ createTracking({ providers: [] });
 export function generateMetadata(): Metadata {
   const description = readmeTagline();
 
+  // Stated rather than inferred: `metadataBase` makes the URL absolute but
+  // does not add `basePath`, and the dimensions let a crawler lay the card out
+  // before it has finished fetching the image.
+  const images = [
+    {
+      url: `${basePath}${homeImageRoute}`,
+      width: 1200,
+      height: 630,
+      alt: 'Name the event once. Every tool gets its own.',
+    },
+  ];
+
   return {
     description,
     alternates: { canonical: '/' },
-    openGraph: { description },
-    twitter: { description },
+    // Spread, never replace: see `openGraphDefaults`.
+    openGraph: { ...openGraphDefaults, description, images },
+    twitter: { ...twitterDefaults, description, images },
   };
 }
 

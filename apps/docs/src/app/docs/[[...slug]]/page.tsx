@@ -10,7 +10,7 @@ import { createRelativeLink } from 'fumadocs-ui/mdx';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getMDXComponents } from '@/components/mdx';
-import { gitConfig } from '@/lib/shared';
+import { gitConfig, openGraphDefaults, twitterDefaults } from '@/lib/shared';
 import { getPageImageUrl, getPageMarkdownUrl, source } from '@/lib/source';
 
 export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
@@ -53,11 +53,13 @@ export async function generateMetadata(props: PageProps<'/docs/[[...slug]]'>): P
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
+  const images = getPageImageUrl(page).url;
+
   return {
     title: page.data.title,
     description: page.data.description,
-    openGraph: {
-      images: getPageImageUrl(page).url,
-    },
+    // Spread, never replace: see `openGraphDefaults`.
+    openGraph: { ...openGraphDefaults, url: page.url, images },
+    twitter: { ...twitterDefaults, images },
   };
 }
