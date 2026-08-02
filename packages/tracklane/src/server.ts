@@ -5,6 +5,11 @@ export {
   type Ga4ServerCredentials,
   ga4,
 } from './providers/ga4.server.js';
+export {
+  type MetaServerConfig,
+  type MetaServerCredentials,
+  meta,
+} from './providers/meta.server.js';
 
 import type {
   ActionSource,

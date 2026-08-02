@@ -40,7 +40,7 @@ Deciding which tools may run at all is your application's, and
 it: it holds the visitor's answer, and a companion package surveys what a jurisdiction requires.
 Both live outside the library, and the library never learns they exist.
 
-**GA4** ships today. **Meta, LinkedIn, PostHog and X** are next. Any tool that receives
+**GA4** and **Meta** ship today. **LinkedIn, PostHog and X** are next. Any tool that receives
 events about what your users do can be a destination, using the same public contract.
 
 **Documentation:** https://tracklane.codar.me · **npm:** https://www.npmjs.com/package/tracklane

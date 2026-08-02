@@ -90,7 +90,7 @@ build, so it is never ahead of the library.
 | Vendor   | Conversion API       | Status |
 | -------- | -------------------- | ------ |
 | GA4      | Measurement Protocol | shipped |
-| Meta     | Conversions API      | next   |
+| Meta     | Conversions API      | shipped |
 | LinkedIn | Conversions API      | next   |
 | PostHog  | Capture API          | next   |
 | X        | Conversions API      | next   |
