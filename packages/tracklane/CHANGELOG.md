@@ -1,5 +1,22 @@
 # tracklane
 
+## 0.2.0
+
+### Minor Changes
+
+- [#12](https://github.com/brunobertolini/tracklane/pull/12) [`99b7390`](https://github.com/brunobertolini/tracklane/commit/99b73900be51c7275a1b29f31f7f2e6cdcb178ad) Thanks [@brunobertolini](https://github.com/brunobertolini)! - Add the Meta provider, on both halves.
+
+  `meta()` in the browser talks to the pixel your snippet already initialised, translating the
+  canonical vocabulary into Meta's standard event names and sending anything else as a custom event.
+  `meta({ pixelId, accessToken })` on the server posts to the Conversions API, hashing identity with
+  each field's own normalisation and reading the `_fbp` and `_fbc` cookies the pixel wrote.
+
+  Pass the same `dedupId` from both halves and Meta counts one conversion rather than two.
+
+  Verified against a real pixel and dataset before shipping, which is how the browser half ended up
+  on `fbq('track')` rather than `fbq('trackSingle')`: Meta documents where the deduplication object
+  goes on `track` and not on `trackSingle`, and deduplication failing is silent.
+
 ## 0.1.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@tracklane/consent",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Holds the visitor's consent answer in a first-party cookie, readable by both the browser and the server. No geography, no vendor, no mandatory UI.",
   "keywords": [
     "consent",
