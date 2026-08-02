@@ -10,7 +10,7 @@
     {
       "id": "meta",
       "label": "Meta",
-      "shipped": false,
+      "shipped": true,
       "serverApi": "Conversions API"
     },
     {

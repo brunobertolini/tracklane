@@ -1,4 +1,4 @@
 {
   "title": "Providers",
-  "pages": ["ga4", "custom"]
+  "pages": ["ga4", "meta", "custom"]
 }

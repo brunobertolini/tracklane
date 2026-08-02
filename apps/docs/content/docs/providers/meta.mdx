@@ -1,0 +1,299 @@
+---
+title: Meta
+description: What this library does with the Meta pixel and the Conversions API, and what it deliberately does not
+---
+
+This page covers what is **ours**: what you configure, what we translate, and the traps that are
+not in Meta's own pages. For what each parameter means, go to
+[Meta's pixel reference](https://developers.facebook.com/docs/meta-pixel/reference) and the
+[Conversions API parameters](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters).
+We do not restate them here.
+
+**Verified against a real pixel and dataset on 2026-08-02.** Both halves were driven from the built
+library: the browser events were captured leaving the page and confirmed in Events Manager, and the
+Conversions API events were confirmed there too, with Meta itself attributing the purchase to both
+the pixel and the Conversions API. What follows includes what that exercise found, which is not the
+same as what Meta documents.
+
+One thing on this page is still inferred rather than documented, and says so where it appears: the
+level at which Limited Data Use travels.
+
+Meta is the first vendor here whose two halves genuinely differ. Identity is hashed on the server
+and hashed by the pixel in the browser; consent is a command on one side and nothing at all on the
+other; the order id has a slot on one surface and not on the other. Read both sections.
+
+## Browser
+
+**Put Meta's base code on the page first**, the way
+[Meta documents it](https://developers.facebook.com/docs/meta-pixel/get-started). This library
+talks to the pixel that is there; it does not inject scripts and never calls `fbq('init')`.
+
+```ts
+import { createTracking, meta } from 'tracklane/browser';
+
+const { track, consent } = createTracking({
+  providers: [meta()],
+});
+
+track('purchase', { transaction_id: 'T-1', value: 49.9, currency: 'BRL' }, { dedupId: 'T-1' });
+```
+
+The pixel id must match the one the page initialises. If the pixel is missing, calls fail and are
+reported through `onError`, the same thing a hand-written `fbq(…)` would do.
+
+Three things belong in your snippet and not here, because Meta requires them before `init`:
+
+- **Advanced matching.** Meta's own instruction is to "place advanced matching parameters in the
+  pixel base code or the values will not be treated as manual advanced matching values". So there
+  is **no `identify()` for Meta in the browser**. Put `em`, `ph`, `fn`, `ln` in your
+  `fbq('init', '1234567890', { … })`, where the pixel normalises and hashes them for you. The
+  server half, which has no snippet, takes the same identity through `context.user`.
+- **The first consent declaration.** `fbq('consent', 'revoke')` runs before `init`. Everything
+  after it goes through `consent()`.
+- **Limited Data Use.** `fbq('dataProcessingOptions', ['LDU'], 0, 0)` also runs before `init`. On
+  the server, where there is no snippet, it is a factory option.
+
+### What maps where
+
+| You call | Meta receives |
+| --- | --- |
+| `track('purchase', data)` | `fbq('track', 'Purchase', …)` |
+| `track('my_event', data)` | `fbq('trackCustom', 'my_event', …)` |
+| `dedupId` | `{ eventID }`, the last argument (see below) |
+| `data.items` | `contents: [{ id, quantity, item_price }]` |
+| `data.value`, `data.currency` | the same names |
+| `data.transaction_id` | **unchanged**: the pixel documents no order id |
+| anything else in `data` | a custom property, unchanged |
+| `consent(command, state)` | `fbq('consent', 'grant' \| 'revoke')` |
+| `identify(user)` | **nothing**, see above |
+
+**There is no pixel id to pass**, because `fbq('track')` reaches every pixel the page initialised
+and an id here would address nothing. Your snippet's `fbq('init')` is what declares the pixel.
+
+Meta also offers `trackSingle`, which does address one pixel. This adapter used it and moved away:
+Meta publishes no signature for `trackSingle` carrying the `{ eventID }` object, and that object is
+what deduplication depends on. It worked when we checked it against a real pixel, and an
+undocumented shape that works today can stop working with no error and no symptom — both halves
+would simply start counting. A documented path is worth more here than addressing.
+
+Only Meta's documented `contents` keys survive the translation. A GA4 item's `item_name` or
+`item_brand` is dropped rather than forwarded, because a key Meta does not read inside `contents`
+looks mapped and arrives nowhere.
+
+### Consent, collapsed
+
+Meta has one switch where this library carries Google's four signals, so the four collapse into it:
+
+- **`grant`** when every signal you declared is `granted`.
+- **`revoke`** when any of them is `denied`.
+- **nothing at all** when you declared nothing, because reading silence as either answer puts words
+  in the visitor's mouth.
+
+Any other reduction would let one denial come out the other side as a grant. If you want Meta to
+follow only your advertising category and not your analytics one, that is a decision about *which
+vendors exist*, made before `createTracking`, which is what
+[`@tracklane/consent`](/docs/consent) is for.
+
+Meta has no equivalent of Google's `default` / `update` split, so the command maps to nothing and
+only the state is forwarded.
+
+**`revoke` holds events back; it does not throw them away.** This is Meta's behaviour, not this
+library's, it is not on Meta's own pages, and it surprises people. Verified on a real pixel: an
+`AddToCart` fired while revoked sent nothing for three seconds, and then left the moment a later
+`grant` arrived, without being fired again. So a visitor who declines, browses, and accepts later
+delivers the whole declined stretch to Meta at the instant of acceptance.
+
+If your policy is that a declined period must never reach Meta at all, `consent()` is the wrong
+instrument for it. Keep Meta out of `providers` until the visitor has accepted, which is the
+decision [`@tracklane/consent`](/docs/consent) exists to make.
+
+## Server
+
+Create the access token first, in Events Manager under your dataset. It is a credential; keep it
+out of your client bundle, which is one of the reasons the server entry point is separate.
+
+```ts
+import { createTracking, meta } from 'tracklane/server';
+
+const { track } = createTracking({
+  providers: [meta({ pixelId: '1234567890', accessToken: process.env.META_ACCESS_TOKEN })],
+});
+
+await track(
+  'purchase',
+  { transaction_id: order.id, value: 49.9, currency: 'BRL', items: order.items },
+  {
+    user: { email: order.email, phone: order.phone, userId: order.userId },
+    cookies: request.headers.get('cookie'),
+    dedupId: order.id,
+    timestamp: order.paidAt,
+    url: 'https://shop.example/thanks',
+    ip,
+    userAgent,
+  },
+);
+```
+
+**Pass the cookies.** `_fbp` and `_fbc` are set by Meta's own pixel and forwarded untouched. If
+neither is there and you sent no other identifier, the library **refuses to send** and tells you
+why: Meta requires at least one `user_data` parameter and none of them can be invented.
+
+That includes `fbc`. Meta documents how to build one out of an `fbclid` in the URL, and it needs a
+click timestamp this library does not have. If you want one, build it yourself and pass it as a
+cookie: `cookies: { _fbc: 'fb.1.<timestamp>.<fbclid>' }`.
+
+### What maps where
+
+| Context or data | Meta receives |
+| --- | --- |
+| `user.email`, `user.phone`, `user.firstName`, `user.lastName` | `em`, `ph`, `fn`, `ln`, normalised then SHA-256 |
+| `user.userId` | `external_id`, raw |
+| `ip`, `userAgent` | `client_ip_address`, `client_user_agent`, raw |
+| `_fbp`, `_fbc` cookies | `fbp`, `fbc`, exactly as the pixel wrote them |
+| `dedupId` | `event_id` |
+| `url` | `event_source_url` |
+| `timestamp` | `event_time`, in seconds |
+| `source` | `action_source` |
+| `data.transaction_id` | `order_id` inside `custom_data` |
+| `data.items` | `contents` inside `custom_data` |
+| `consent`, `traits` | **nothing**: this endpoint has no slot for either |
+
+### Hashing happens here, on purpose
+
+Pass raw values. The adapter normalises and hashes them, because that is what the field *is*: Meta
+does not define a parameter called "email" that would like a hash, it defines `em` as the SHA-256
+of the trimmed, lowercased address, the same way it defines `event_time` as seconds. Writing this
+by hand you would write `sha256(email.trim().toLowerCase())`.
+
+The alternative is where integrations demonstrably go wrong. Three of the five vendors here want
+SHA-256 under three different normalisation rules, and a host hashing on its own side ends up
+hashing the same address three ways and finding out only as a quietly poor match rate.
+
+Two consequences worth knowing. A phone number is stripped to digits with leading zeros removed,
+and **no country code is added**. Meta wants one, and guessing a country onto a number invents an
+identifier belonging to somebody else. And `external_id` is sent raw, because Meta only recommends
+hashing it; if you also put an external id in your `fbq('init')`, remember that the pixel hashes
+what it finds there, so pre-hash on both sides or on neither.
+
+### `action_source` is required on every event
+
+Meta rejects an event without it. The factory carries `'website'` by default; a call that is not a
+website conversion overrides it:
+
+```ts
+meta({ pixelId, accessToken }, { actionSource: 'system_generated' });
+
+await track('purchase', order, { source: 'physical_store' });
+```
+
+### The other factory options
+
+```ts
+meta(
+  { pixelId: '1234567890', accessToken },
+  {
+    apiVersion: 'v25.0',
+    testEventCode: 'TEST12345',
+    dataProcessingOptions: ['LDU'],
+    dataProcessingOptionsCountry: 0,
+    dataProcessingOptionsState: 0,
+  },
+);
+```
+
+`apiVersion` is pinned by default rather than left off the URL, because an unversioned Graph URL
+resolves to the *oldest* version still available.
+
+`testEventCode` routes events to the Test Events tab instead of your live dataset. Remove it before
+production.
+
+Limited Data Use is a **processing marking**, not a consent declaration, which is why it lives here
+and not in `consent`. It is a pure relay: Meta documents it, you decide, we forward it, as a field
+on each server event. Meta lists it among its server event parameters but shows no example stating
+that level outright, so confirm it in Test Events alongside the rest of your payload.
+
+## Deduplication
+
+This is the one place where getting it wrong is silent. Nothing breaks, the conversion is just
+counted twice.
+
+Send the **same** `dedupId` from both halves. It becomes `eventID` in the browser and `event_id` on
+the server, and Meta matches on that value **together with the event name**, so both halves must
+resolve to the same Meta name too. The library never generates the value: the browser and the
+server do not share a process, so only something you already own, an order id, can match on both
+sides.
+
+Verified against a real pixel: the outgoing request carried `eid=<your dedupId>` and Events Manager
+showed that value against the purchase, with the conversion attributed to both the pixel and the
+Conversions API. If you ever need to check your own integration, `eid` in the network panel is the
+thing to look for — its absence is silent, and both halves would simply count.
+
+## Standard events, and everything else
+
+Meta has seventeen standard events, plus `PageView`, which it documents separately and which its
+base snippet fires by itself. The canonical vocabulary here is GA4's, so this is the map the
+library ships:
+
+| You call | Meta receives |
+| --- | --- |
+| `page_view` | `PageView` |
+| `view_item` | `ViewContent` |
+| `search` | `Search` |
+| `add_to_cart` | `AddToCart` |
+| `add_to_wishlist` | `AddToWishlist` |
+| `begin_checkout` | `InitiateCheckout` |
+| `add_payment_info` | `AddPaymentInfo` |
+| `purchase` | `Purchase` |
+| `sign_up` | `CompleteRegistration` |
+| `generate_lead` | `Lead` |
+
+**Anything else is sent as a custom event**, under your own name: `trackCustom` in the browser, and
+the same name as `event_name` on the Conversions API, which has no separate command for a custom
+event. Nothing is silently dropped: by hand you would have sent that event, so the library sends it.
+
+Meta's other eight standard events (`Subscribe`, `StartTrial`, `Schedule`, `Contact`, `Donate`,
+`FindLocation`, `CustomizeProduct`, `SubmitApplication`) have no GA4 counterpart, and inventing
+canonical names for them would make this library the author of a vocabulary it deliberately
+borrows. Map your own event name instead:
+
+```ts
+meta('1234567890', { events: { start_trial: 'StartTrial', contact: 'Contact' } });
+```
+
+The same map keeps an event out of Meta entirely:
+
+```ts
+meta('1234567890', { events: { internal_admin_action: null } });
+```
+
+Your entries merge over the built-in ones, on both halves. Remember to configure both, or
+deduplication stops matching.
+
+## The traps
+
+- **`fbq('track')` broadcasts, and so does this library.** With two pixels initialised on a page,
+  every event reaches both, which is what a hand-written `fbq('track')` does too. If you run a
+  second pixel that must not receive your events, keep it off the pages this library runs on:
+  `trackSingle` would address one pixel, and it is deliberately not used here, for the reason given
+  under Browser.
+- **`PageView` fires more than once.** The base snippet fires it on load, and the pixel also
+  listens to `history.pushState` by default. If your router also calls `track('page_view')`, you
+  have two. Meta documents `fbq.disablePushState = true` for exactly this.
+- **A 200 is not a delivered event.** Meta answers 200 with a `messages` array when it took the
+  request and disliked part of it. The library reports those through `onError` as a warning with
+  the `fbtrace_id`; look them up in Events Manager, because the reason is not in the response you
+  can log.
+- **The whole batch fails together**, which is a trap only if you also post to this endpoint
+  yourself. Meta rejects the entire request when one event in it is invalid; this library never
+  batches, so every `track()` call is one event in one request and can only take itself down.
+- **Empty values still hash.** An empty string has a perfectly valid SHA-256 that matches nobody,
+  and it would count towards Meta's one-identifier minimum. The library omits a field whose
+  normalised value is empty rather than sending the digest of nothing.
+
+To confirm anything about this vendor, use **Test Events** with a `testEventCode`, then the
+dataset's own report. The status code tells you almost nothing.
+
+## Not included
+
+Meta's tag, `fbq('init')`, advanced matching in the browser, batching, retries, and any decision
+about whether an event should be sent. See [what this library is not](/docs/#what-it-is-not).
