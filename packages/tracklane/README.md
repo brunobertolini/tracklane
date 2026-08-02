@@ -1,14 +1,20 @@
 # tracklane
 
-> One interface between your application and every tool that receives events.
+> One interface between your application and every analytics and advertising tool, in the browser
+> and through their conversion APIs.
 
 Every analytics and advertising tool arrives with its own SDK, its own event names and its own
 payload format. Add a second one and the tracking call at each conversion point stops being a line
 and becomes a block. Add a third and every one of those blocks has to change.
 
-`tracklane` gives your application one interface. Name what happened once, in GA4's vocabulary,
-and it reaches every tool you configured, in the browser and through their server-side conversion
-APIs.
+The server-side half is worse. Each vendor ships a separate conversion API with a different name
+and a different contract: Google's Measurement Protocol, Meta's Conversions API, LinkedIn's
+Conversions API, PostHog's Capture API. Each wants its own identifiers, its own hashing rules, and
+its own way of tying a server event back to the browser event so the two are not counted twice.
+
+`tracklane` gives your application one interface for both. Name what happened once, in GA4's
+vocabulary, and it reaches every tool you configured, translated into that tool's event names,
+payload shape and identifiers.
 
 **Documentation:** https://tracklane.codar.me
 
@@ -39,6 +45,10 @@ consent('update', { ad_storage: 'granted', analytics_storage: 'granted' });
 ```
 
 ## Server
+
+Each vendor's conversion API, behind the call you already wrote. The credentials are that vendor's
+own: GA4's Measurement Protocol wants a `measurementId` alongside its `apiSecret`, exactly as its
+own endpoint does.
 
 ```ts
 import { createTracking, ga4 } from 'tracklane/server';
@@ -72,7 +82,20 @@ install vendor tags.
 
 ## Providers
 
-**GA4** ships today, on both surfaces. **Meta, LinkedIn, PostHog and X** are next.
+Both surfaces, or it does not count as shipped. This table is checked against the source on every
+build, so it is never ahead of the library.
+
+<!-- providers:start -->
+
+| Vendor   | Conversion API       | Status |
+| -------- | -------------------- | ------ |
+| GA4      | Measurement Protocol | shipped |
+| Meta     | Conversions API      | next   |
+| LinkedIn | Conversions API      | next   |
+| PostHog  | Capture API          | next   |
+| X        | Conversions API      | next   |
+
+<!-- providers:end -->
 
 Any tool that receives events about what your users do can be a destination, and writing your own
 uses the same public contract the built-in ones use, without a registry entry, an allow-list, or a

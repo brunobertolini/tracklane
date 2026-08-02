@@ -1,10 +1,30 @@
+import { serverApiPhrase, statusSentence } from '@/lib/providers';
 import { appName, docsContentRoute, siteUrl } from '@/lib/shared';
 import { source } from '@/lib/source';
 
 export const revalidate = false;
 
-const SUMMARY =
-  'One interface between an application and every tool that receives user-behaviour events, in the browser and through their server-side conversion APIs. Name an event once, in GA4 vocabulary, and it reaches every configured tool. GA4 ships today. Meta, LinkedIn, PostHog and X are next. It standardises and organises and never changes behaviour: no consent decisions, no queues, no retries, and it does not install vendor tags.';
+/**
+ * What the library is, in the words a reader arrives with.
+ *
+ * The status half is generated: this file used to assert "GA4 ships today,
+ * Meta is next" by hand, and it was the last place a release remembered to
+ * correct. The vocabulary half names the vendors' own APIs, because a question
+ * about this problem is almost never phrased as "server-side analytics". It is
+ * phrased as the Conversions API, which is the name the vendor uses.
+ */
+function summary(): string {
+  return [
+    'One interface between an application and every tool that receives user-behaviour events,',
+    `in the browser and through each vendor's own conversion API (${serverApiPhrase()}).`,
+    'Name an event once, in GA4 vocabulary, and it reaches every configured tool, translated',
+    "into that tool's event names, payload shape and identifiers, with one deduplication id",
+    'shared between the browser event and the server one.',
+    statusSentence(),
+    'It standardises and organises and never changes behaviour: no consent decisions, no queues,',
+    'no retries, and it does not install vendor tags.',
+  ].join(' ');
+}
 
 /**
  * The index an LLM reads first.
@@ -28,7 +48,7 @@ export function GET(): Response {
     .sort();
 
   return new Response(
-    [`# ${appName}`, '', `> ${SUMMARY}`, '', '## Docs', '', ...pages, ''].join('\n'),
+    [`# ${appName}`, '', `> ${summary()}`, '', '## Docs', '', ...pages, ''].join('\n'),
     { headers: { 'content-type': 'text/plain; charset=utf-8' } },
   );
 }

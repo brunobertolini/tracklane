@@ -23,6 +23,7 @@ interface Declared {
   id: string;
   label: string;
   shipped: boolean;
+  serverApi: string;
 }
 
 function declared(): Declared[] {
@@ -59,6 +60,42 @@ describe('declared providers', () => {
     // direction: the site would tell a reader to wait for something already
     // released.
     expect(halves).toEqual([]);
+  });
+
+  /**
+   * The README is the one claim we cannot generate at read time: it is a static
+   * file, published to npm, and for most readers it is the only page they see.
+   * So it states the table by hand and this fails when the hand is wrong.
+   *
+   * Compared cell by cell rather than as text, so that re-aligning the pipes is
+   * not a test failure.
+   */
+  it('states the same providers in the published README', () => {
+    const readme = readFileSync(join(providersDir, '../../README.md'), 'utf8');
+    const block = /<!-- providers:start -->([\s\S]*?)<!-- providers:end -->/.exec(readme);
+
+    expect(block, 'README lost its providers:start/end markers').not.toBeNull();
+
+    const rows = (block?.[1] ?? '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith('|'))
+      .map((line) =>
+        line
+          .slice(1, -1)
+          .split('|')
+          .map((cell) => cell.trim()),
+      )
+      .filter((cells) => !cells.every((cell) => /^-+$/.test(cell)));
+
+    expect(rows).toEqual([
+      ['Vendor', 'Conversion API', 'Status'],
+      ...declared().map(({ label, serverApi, shipped }) => [
+        label,
+        serverApi,
+        shipped ? 'shipped' : 'next',
+      ]),
+    ]);
   });
 
   it('declares every vendor present in the source', () => {

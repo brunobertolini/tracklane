@@ -5,6 +5,7 @@ import { createTracking } from 'tracklane/server';
 import { CodeBlock } from '@/components/code-block';
 import { Cta } from '@/components/cta';
 import { FanOut } from '@/components/fan-out';
+import { declaredProviders, serverApiPhrase, statusSentence } from '@/lib/providers';
 import { readmeExamples, readmeTagline } from '@/lib/readme';
 import {
   appName,
@@ -79,8 +80,8 @@ const PROMISES = [
   },
   {
     icon: <Server aria-hidden />,
-    title: 'Browser and server',
-    body: 'Two independent libraries sharing only the vocabulary, so an event means the same thing on both sides. The conversion APIs are half the problem, and each provider covers both.',
+    title: 'Pixels and conversion APIs',
+    body: 'The server-side APIs are the expensive half: hashed identifiers, deduplication against the browser event, a different payload shape per vendor. Every provider ships both halves, and neither is an add-on.',
   },
   {
     icon: <ShieldOff aria-hidden />,
@@ -96,13 +97,22 @@ const PROMISES = [
 
 // Our own monograms, never a vendor's logotype: those are their trademarks and
 // not ours to put on a page.
-const VENDORS = [
-  { name: 'GA4', mark: 'G4', shipped: true },
-  { name: 'Meta', mark: 'M', shipped: false },
-  { name: 'LinkedIn', mark: 'in', shipped: false },
-  { name: 'PostHog', mark: 'Ph', shipped: false },
-  { name: 'X', mark: 'X', shipped: false },
-];
+const MARKS: Record<string, string> = {
+  ga4: 'G4',
+  meta: 'M',
+  linkedin: 'in',
+  posthog: 'Ph',
+  x: 'X',
+};
+
+/**
+ * The label, the status and the vendor's own API name all come from the
+ * declared list. Only the monogram is ours, so only the monogram is here.
+ */
+const VENDORS = declaredProviders().map((provider) => ({
+  ...provider,
+  mark: MARKS[provider.id] ?? provider.label.slice(0, 2),
+}));
 
 export default function HomePage() {
   const tagline = readmeTagline();
@@ -170,8 +180,10 @@ export default function HomePage() {
           <h2 className={HEADING}>The same event, both sides.</h2>
           <p className={LEDE}>
             Two independent libraries that share only the vocabulary, which is what makes an event
-            mean the same thing in the browser and in your backend. No shared runtime, no shared
-            state, and nothing to keep in sync but the name.
+            mean the same thing in the browser and in your backend. The server half speaks each
+            vendor's own conversion API, {serverApiPhrase()}, from a call that looks like the
+            browser one. No shared runtime, no shared state, and nothing to keep in sync but the
+            name.
           </p>
           <div className="mt-10 grid items-start gap-5 lg:grid-cols-2">
             {examples.map((example, index) => (
@@ -226,7 +238,7 @@ export default function HomePage() {
         <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {VENDORS.map((vendor) => (
             <li
-              key={vendor.name}
+              key={vendor.id}
               className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#0d0d0e] px-4 py-3.5"
             >
               <span
@@ -235,14 +247,15 @@ export default function HomePage() {
               >
                 {vendor.mark}
               </span>
-              {/* One string per item, not three fragments. Anything reading the
+              {/* One string per item, not four fragments. Anything reading the
                   text rather than the layout (a screen reader, a crawler)
-                  otherwise gets "MMetasoon". */}
+                  otherwise gets "MMetaConversions APIsoon". */}
               <span className="sr-only">
-                {vendor.shipped ? `${vendor.name}, shipped` : `${vendor.name}, not shipped yet`}
+                {vendor.label}, {vendor.serverApi}, {vendor.shipped ? 'shipped' : 'not shipped yet'}
               </span>
-              <span aria-hidden className="font-medium text-white/85">
-                {vendor.name}
+              <span aria-hidden className="min-w-0">
+                <span className="block font-medium text-white/85">{vendor.label}</span>
+                <span className="block truncate text-[11px] text-white/35">{vendor.serverApi}</span>
               </span>
               <span
                 aria-hidden
@@ -265,8 +278,7 @@ export default function HomePage() {
             Start with one tool.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-fd-muted-foreground leading-relaxed">
-            GA4 works today, in the browser and on the server. The other four land one at a time,
-            each one verified against a real account before it ships.
+            {statusSentence()}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Cta
