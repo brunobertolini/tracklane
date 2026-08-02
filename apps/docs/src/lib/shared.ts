@@ -20,6 +20,18 @@ export const authorName = 'Bruno Bertolini';
  */
 export const authorUrl = 'https://x.com/brunobertolini';
 
+/**
+ * Whose domain this is served from.
+ *
+ * The site lives at a subdomain of the studio, so a byline naming only a person
+ * leaves the address bar unexplained: the reader arrives at a company and is
+ * told an individual wrote it, with nothing joining the two. Saying both is
+ * cheaper than a domain of our own, and it answers the question the address
+ * raises before anyone has to ask it.
+ */
+export const studioName = 'Codar.me';
+export const studioUrl = 'https://codar.me';
+
 export const gitConfig = {
   user: 'brunobertolini',
   repo: 'tracklane',
