@@ -206,9 +206,18 @@ Everything else that identifies a person comes from `cookies`, read by whichever
 format. Values are always raw: hashing and normalisation are field formats defined by each vendor
 and applied inside the adapter that owns the field.
 
-**Correction to an earlier claim. [falsified]** A previous draft said X accepts raw identifiers in
-the browser and hashes them itself. It does not — X's pixel documents no identity surface at all.
-That was an unconfirmed inference in the research and it did not survive contact.
+**Correction to an earlier claim, and then a correction to the correction. [restored]** A previous
+draft said X accepts raw identifiers in the browser and hashes them itself. This record then called
+that falsified, on the grounds that X's pixel documents no identity surface at all. Writing the
+adapter found the opposite: the pixel does document `email_address` and `phone_number`, and it does
+hash them itself, which is what the research inferred in the first place. The falsification was the
+error.
+
+The adapter still sends no identity from the browser, for a different reason that is worth keeping
+separate from the vendor fact: those are parameters of a single event rather than a standing
+identity, so honouring `identify` would mean holding the person in the provider and attaching them
+to every later event. This library keeps no such state, and one that did would carry a visitor
+across a logout. Identity reaches X on the server half, where it travels with the call.
 
 ## The provider contracts
 
@@ -246,6 +255,13 @@ library keeps finding elsewhere.
 
 `events` is **required by the type** on `linkedin` and `x`: neither vendor has event names, only
 conversion rules minted per account in a dashboard.
+
+That requirement lives on each of those factories' own config, not in `BrowserProvider` or
+`ServerProvider`, where `events` is and stays optional — GA4 and PostHog ship none. The distinction
+matters because this paragraph reads like a guarantee of the core and is not one: a provider
+written elsewhere may declare `default: 'ignore'` and accept no map at all, and nothing in the
+contract stops it. What the core owes that case is the development-time warning above, which is why
+the two are decided together.
 
 ## Vendor levers live on the vendor's factory, and only there
 
