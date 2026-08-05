@@ -10,6 +10,11 @@ export {
   type MetaServerCredentials,
   meta,
 } from './providers/meta.server.js';
+export {
+  type PosthogServerConfig,
+  type PosthogServerCredentials,
+  posthog,
+} from './providers/posthog.server.js';
 
 import type {
   ActionSource,

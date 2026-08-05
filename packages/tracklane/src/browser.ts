@@ -2,6 +2,7 @@ import { assertUniqueProviders, makeReporter, messageOf, resolveEvent } from './
 
 export { type Ga4BrowserConfig, ga4 } from './providers/ga4.browser.js';
 export { type MetaBrowserConfig, meta } from './providers/meta.browser.js';
+export { type PosthogBrowserConfig, posthog } from './providers/posthog.browser.js';
 
 import type {
   ConsentState,
