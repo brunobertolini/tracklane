@@ -22,7 +22,7 @@
     {
       "id": "posthog",
       "label": "PostHog",
-      "shipped": false,
+      "shipped": true,
       "serverApi": "Capture API"
     },
     { "id": "x", "label": "X", "shipped": false, "serverApi": "Conversions API" }

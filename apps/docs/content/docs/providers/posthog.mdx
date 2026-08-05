@@ -1,0 +1,147 @@
+---
+title: PostHog
+description: What this library does with PostHog, and what it deliberately does not
+---
+
+This page covers what is **ours**: what you configure, what we translate, and the traps PostHog's
+own documentation does not mention. For what each PostHog property means, go to
+[PostHog's own reference](https://posthog.com/docs/api/capture). We do not restate it here.
+
+**Verified against a live PostHog project.** Both halves were driven from the built library and
+confirmed in the project's own activity view: the browser events under the anonymous person
+PostHog created, and the server events under the same person, recovered from PostHog's cookie
+without the library inventing anything. What follows includes what that exercise found, which is
+not the same as what PostHog documents.
+
+## Browser
+
+**Put PostHog's snippet on the page first**, the way
+[PostHog documents it](https://posthog.com/docs/libraries/js). This library talks to the instance
+that is already there; it does not inject scripts into your page.
+
+```ts
+import { createTracking, posthog } from 'tracklane/browser';
+
+const { track, identify, consent } = createTracking({ providers: [posthog()] });
+```
+
+If the snippet is missing, calls fail and are reported through `onError`, the same thing a
+hand-written `posthog.capture(…)` would do.
+
+### Optional configuration
+
+```ts
+posthog({ events: { my_event: 'my_posthog_name' } });
+```
+
+Rarely needed: `capture()` accepts any string, so the canonical vocabulary passes through
+unchanged.
+
+### What maps where
+
+| You call | PostHog receives |
+| --- | --- |
+| `track(name, data)` | `posthog.capture(name, data)` |
+| `identify({ userId })` | `posthog.identify(userId)` |
+| `identify(user, traits)` | `posthog.setPersonProperties(traits)` |
+| `consent(command, { analytics_storage })` | `opt_in_capturing()` or `opt_out_capturing()` |
+| `dedupId` | **nothing** |
+
+`identify`'s `email`, `phone`, `firstName` and `lastName` map to nothing. PostHog's only identity
+slot is `distinct_id`; there is no separate field for any of the others the way Meta's `user_data`
+has one each, so inventing a destination for them would look mapped and arrive nowhere.
+
+`dedupId` maps nowhere: the Capture API documents no field for matching a browser event to a
+server event of the same action. PostHog does carry an internal per-event `uuid` used to survive
+its own retries, and its documentation discourages relying on it, so it is not that field wearing
+another name. Use `transaction_id` (business data) to control duplicate purchases.
+
+### Consent is one switch, not four
+
+PostHog's own consent surface is `opt_in_capturing()` / `opt_out_capturing()`: a single binary
+switch, held as local SDK state, not a signal sent with the event. Our vocabulary is Google's four
+granular signals, so this library collapses onto the one that actually describes what the switch
+governs — `analytics_storage`. The other three (`ad_storage`, `ad_user_data`,
+`ad_personalization`) have no honest PostHog equivalent and are left alone: folding them in would
+risk an ad-only denial silently turning off analytics capture the visitor never objected to.
+
+An `analytics_storage` you never declared fires no command at all. Whatever posture the page's own
+snippet already set — opted in by default, or opted out through `opt_out_capturing_by_default` —
+stands.
+
+**Opting out discards; it does not hold.** Verified against a live project: an event fired while
+opted out never arrives, and granting consent afterwards does not release it. That is worth
+knowing if you also run Meta, whose pixel does the opposite — it queues the events fired while
+revoked and delivers the whole stretch the moment consent arrives. Same `consent()` call on your
+side, opposite outcome at the two vendors, and neither documents it.
+
+**Granting consent produces an event.** `opt_in_capturing()` captures a `$opt_in` of its own, so a
+consent banner that calls `consent('update', { analytics_storage: 'granted' })` puts an **Opt in**
+row in your project that nothing in your code asked for. It is PostHog's behaviour, not this
+library's, and there is no way to send the grant without it.
+
+## Server
+
+```ts
+import { createTracking, posthog } from 'tracklane/server';
+
+const { track } = createTracking({
+  providers: [posthog({ apiKey: process.env.POSTHOG_API_KEY })],
+});
+
+await track('purchase', order, {
+  user: { userId: order.userId },
+  cookies: request.headers.get('cookie'),
+});
+```
+
+`apiKey` is the project API key — the same one the browser snippet is initialised with. `host`
+is optional and only needed off PostHog's default US Cloud instance: `https://eu.i.posthog.com`
+for the EU Cloud, or a self-hosted deployment's own origin.
+
+### Resolving `distinct_id`
+
+The Capture API has one identity slot, not two the way GA4 has a required `client_id` plus an
+optional `user_id`. PostHog's own guidance is to send the same `distinct_id` the browser SDK is
+using for that visitor, so this library reads it in that order:
+
+1. `context.user.userId`, when the visitor is known — the same value you would pass to `identify()`
+   on the browser.
+2. Otherwise, the anonymous id PostHog's own snippet already wrote to its cookie
+   (`ph_<api_key>_posthog`), read the same way GA4's `_ga` cookie is read for `client_id`.
+
+Without either, the library **refuses to send** and tells you why: there is no `distinct_id` to
+put in the request, and inventing one would orphan the event on both sides.
+
+### Person properties
+
+`context.traits` travels as `$set` inside `properties`, the same job GA4's `user_properties` does
+in its own body — separate from the identifier used to match someone.
+
+## The traps
+
+- **The distinct_id has to match across your two calls.** A browser
+  `identify({ userId: 'user-42' })` and a server event sent with a different `distinct_id` for the
+  same person creates two people in PostHog instead of one. Pass the same `userId` on both sides
+  once it is known.
+- **There is no deduplication key.** A host sending the same event from both the browser and the
+  server will double-count. Meta, LinkedIn, X and TikTok each document a field for matching the
+  two halves of one action; PostHog and GA4 document none, so `dedupId` maps nowhere here for the
+  same reason it maps nowhere there. It still travels through the library on every call, ready the
+  day PostHog documents one.
+- **The server half sends no request context.** `context.url`, `context.ip`, `context.userAgent`,
+  `context.source` and `context.consent` are not forwarded. PostHog does define `$ip` and
+  `$current_url` as ordinary properties, but this endpoint's own reference does not state them
+  clearly enough to translate without guessing, so the adapter leaves them alone. The practical
+  consequence is that a server-tracked event is geolocated to your backend rather than to the
+  visitor. Set them yourself in `data` if you want them, spelled the way PostHog spells them.
+- **Server events take minutes to appear; browser events take seconds.** Measured on a live
+  project: browser events showed up in the activity view in under a minute, server events took
+  about five. A `{"status":"Ok"}` from the endpoint means the request arrived, not that the event
+  is queryable yet, so give it time before concluding a send is broken. It is the same trap in
+  reverse: rushing the check invents a failure that is not there.
+
+## Not included
+
+Consent gating, queues, retries, and any decision about whether an event should be sent. See
+[what this library is not](/docs/#what-it-is-not).
