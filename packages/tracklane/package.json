@@ -39,6 +39,10 @@
       "types": "./dist/server.d.ts",
       "default": "./dist/server.js"
     },
+    "./conformance": {
+      "types": "./dist/conformance.d.ts",
+      "default": "./dist/conformance.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -67,5 +71,13 @@
     "tsdown": "0.22.14",
     "typescript": "catalog:",
     "vitest": "4.1.10"
+  },
+  "peerDependencies": {
+    "vitest": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
   }
 }

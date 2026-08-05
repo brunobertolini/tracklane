@@ -67,6 +67,25 @@ This is why no shape can file each destination under one category: the relations
 because the vendors are irregular. You write that irregularity once, in this list, and it is
 visible.
 
+### Rebuild on the answer, never on every event
+
+`consentedTracking` recomposes the provider list when the visitor answers, and again on `forget`.
+Its `track` and `identify` stay the same functions across every rebuild, so a module loaded before
+the banner is answered — a singleton imported at the top of your app, which is the ordinary case —
+picks up a mid-session acceptance without you doing anything.
+
+**Do not call `createTracking` on every `track` to get the same effect.** It is a reasonable-looking
+move when the gate is your own, and it has consequences that arrive later:
+
+- `install()` runs on every construction. Today's providers install nothing, so nothing hurts;
+  a provider that loads a vendor tag would be asked to do it hundreds of times a session. The
+  docstring asks for idempotence, and idempotent is not the same as cheap.
+- Registering the same vendor twice throws, and that check runs at construction. Rebuilding per
+  call moves a configuration error out of your startup and into your first conversion.
+
+On the server the calculus is different and per-request construction is correct: a request carries
+its own visitor and its own answer, and nothing is shared between them.
+
 ## The answer lives in a cookie
 
 Local storage would serve the browser and be invisible to your server, which has to read the same

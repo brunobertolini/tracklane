@@ -54,7 +54,26 @@ export const acme = (siteId: string, events?: Record<string, string | null>): Br
 ```
 
 Resolution order is your map, then `default`. The name your `track` receives is already resolved,
-so you never look anything up.
+so you never look anything up. With no map and `passthrough`, that resolved name is the canonical
+one, unchanged.
+
+**A binding renames an event. It does not reshape a payload.** `EventBinding` is the vendor's name
+or `null`, and there is deliberately no third option that transforms `data` on the way through: a
+hook there would make what leaves a function of host code, which is the one thing this library
+promises it is not.
+
+So the work of turning your domain objects into the canonical vocabulary — an order into
+`transaction_id`, `value`, `currency` and `items` — is yours, and it is where a migration spends
+most of its time. Do it once, at your own call site or in a thin function in front of `track`, and
+what each vendor needs from those canonical fields is then the adapter's job: `items` becoming
+Meta's `contents` is ours, your database row becoming `items` is yours.
+
+**A binding can also carry an identifier rather than a name.** Some vendors do not have event names
+at all: LinkedIn's conversion identity is an id minted per account in Campaign Manager, so the
+binding holds that id — `events: { purchase: '<conversionId>' }` with `default: 'ignore'`. The
+field is called `events` because that is what it binds, not because the value is always a spelling.
+Passing such an id through `data` instead sends nothing, silently, because the provider then has no
+binding for the event at all.
 
 ### Identity and consent
 
@@ -90,6 +109,22 @@ export const acme = (apiKey: string): ServerProvider => ({
 Throw when the send failed: the dispatcher isolates it, reports it, and the other providers are
 unaffected. Use `report` for something the caller should know about a request that **already
 succeeded**; throwing there would tell a retry loop to resend a delivered conversion.
+
+**Throw when nothing was sent, `report` when something was. Never the other way round**, because
+both reach the same channel and what differs is the claim being made. A `report` on an event that
+never left teaches a host that its diagnostics are advisory, and by the time that matters the
+channel is already ignored.
+
+There is a third case that is neither, and it catches people out: a vendor account that cannot
+receive at all — a scope not approved, credentials for a product not enabled — refuses every event
+permanently. That is configuration, not an event-time condition. **Leave the provider out of
+`providers` until the account can accept**, the same way you leave out a vendor you have not signed
+up for. Reasons in `docs/decisions/0012`.
+
+**Use Web Crypto, not `node:crypto`.** The server providers here hash and sign with `crypto.subtle`
+so the bundle runs on Workers, Deno and the edge as well as on Node. A provider intended for this
+repository is expected to do the same; one you keep in your own codebase can do whatever your
+runtime allows, but porting later is real work — OAuth 1.0a signing especially.
 
 The `context` you receive is already resolved: cookies parsed into a map, `timestamp` as epoch
 milliseconds whatever the caller passed. It carries `user`, `cookies`, `dedupId`, `timestamp`,
@@ -133,15 +168,73 @@ payload disagreement; performing a second operation the contract has no method f
 answer there is usually that the operation belongs in your own code, once, rather than inside every
 `track`.
 
+**The event name your wrapper sees is already resolved.** A provider with no `events` map whose
+`default` is `passthrough` receives the canonical name unchanged, which is what lets a wrapper look
+up its own configuration by that name before delegating. This is contract, not an accident of the
+current dispatcher, and the shared conformance suite holds it in place.
+
+**On the server, await the delegate.** This is the one mistake here that costs money:
+
+```ts
+// Wrong. Compiles, passes a naive test, and on a serverless runtime the
+// conversion request can be killed when the function freezes.
+async track(name, data, context, report) {
+  base.track(name, data, context, report);
+}
+
+// Right.
+async track(name, data, context, report) {
+  await base.track(name, data, context, report);
+}
+```
+
+Nothing in the types catches it, because the wrapper does return a promise — just one that settles
+before the request does. A vendor refusal then never reaches `onError` either; it becomes an
+unhandled rejection somewhere else. Turn on a floating-promise lint rule (Biome's
+`noFloatingPromises`, or the TypeScript ESLint rule of the same name) and run the wrapper through
+the conformance suite below, which fails on exactly this.
+
+Dropping the `report` parameter, on the other hand, is fine. A wrapper that has nothing to report
+can declare three parameters and the compiler is happy, correctly.
+
+**Do not port a browser wrapper to the server, or the reverse.** The two `track` signatures differ
+in arity and in synchronicity, and the halves share a vocabulary and nothing else. Write each one
+against its own contract.
+
 **One trap, and it is the expensive one.** A wrap that hands over an identifier you **stored** is
 the supported shape. A wrap that **fabricates** one is the thing the shipped providers refuse to do,
 and wrapping does not make it safe — patching `context.cookies` with an invented `_ga` produces a
 `204` and nothing in any GA4 report. If you need identity in a place the browser is not,
 [store it and hand it back](/docs/providers/ga4#when-there-is-no-browser-webhooks-and-visitors-without-cookies).
 
-A wrapped provider is outside the conformance suite, with the same freedom and the same
-responsibility a hand-written vendor call carries. And if two people write the same wrap, the
-shipped provider is wrong: tell us, and it stops being your problem.
+And if two people write the same wrap, the shipped provider is wrong: tell us, and it stops being
+your problem.
+
+## Checking your work
+
+The invariants the types cannot express ship as a test suite, and it is published for exactly this
+reason: the claim that a provider written elsewhere uses the same contract as the ones here is only
+true if it can run the same checks.
+
+```ts
+import { conformsAsServerProvider } from 'tracklane/conformance';
+
+describe('my provider', () => {
+  conformsAsServerProvider({
+    create: () => myProvider(),
+    captured: () => fetchMock.mock.calls,
+    reset: () => fetchMock.mockClear(),
+    fail: () => fetchMock.mockResolvedValueOnce(new Response(null, { status: 500 })),
+  });
+});
+```
+
+`vitest` is an optional peer dependency, so this costs you nothing unless you import it. There is a
+`conformsAsBrowserProvider` alongside it.
+
+**Run wrappers through it too.** A wrapped provider is an object the dispatcher cannot tell apart
+from any other, so it owes the same invariants — and on the server the suite is what catches the
+missing `await` above.
 
 ## Three rules worth following
 
@@ -156,3 +249,10 @@ status, the event name and the vendor. Do not report the body.
 until its script loads, so the core holds no queue for anyone. If yours arrives through a promise
 or a React context, keep your own list and replay it: a `track` that returns silently because
 the client is not ready yet is a defect in the provider, not a gap in the core.
+
+**Bring your own event typing.** `EventData` names the fields adapters actually read —
+`transaction_id`, `value`, `currency`, `items` — and then accepts anything else, deliberately: the
+library is not the arbiter of what a product may measure, and a closed type would make every new
+vendor parameter a release here. The cost is that any payload compiles. If you want your own events
+checked, keep a typed map in your codebase and narrow at the call site; that split is the intended
+one, not a gap.

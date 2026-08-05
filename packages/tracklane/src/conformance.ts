@@ -14,6 +14,20 @@ import type { EventData, ProviderDefault } from './vocabulary.js';
  * These are invariants, not vendor behaviour. What GA4 sends and how it spells
  * it belongs in the GA4 tests. What follows must hold for a provider written
  * by anyone, for a vendor nobody here has heard of.
+ *
+ * **Published as `tracklane/conformance`**, because the claim that a provider
+ * written elsewhere uses the same contract as the ones shipped here is only
+ * true if it can run the same checks. `vitest` is an optional peer: import this
+ * from a test file and call one of the two functions below inside a `describe`.
+ *
+ * **A wrapper owes the same invariants as a provider.** Wrapping a shipped
+ * provider and delegating (see the provider documentation) produces an object
+ * that the dispatcher cannot tell apart from any other, so run it through here
+ * too. On the server half that catches the expensive mistake: a wrapper whose
+ * `track` does not `await` the provider it delegates to resolves before the
+ * request settles, which a serverless runtime turns into a conversion that
+ * never left. {@link conformsAsServerProvider} fails on it, because a vendor
+ * refusal can no longer reach the caller.
  */
 
 const DEFAULTS: ProviderDefault[] = ['passthrough', 'ignore'];
