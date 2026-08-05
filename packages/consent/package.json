@@ -61,7 +61,7 @@
     "package:check": "publint --strict && attw --pack . --profile esm-only"
   },
   "peerDependencies": {
-    "tracklane": "workspace:*"
+    "tracklane": ">=0.2.0 <1"
   },
   "peerDependenciesMeta": {
     "tracklane": {
