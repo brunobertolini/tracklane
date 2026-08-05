@@ -99,10 +99,38 @@ describe('posthog server', () => {
     expect(sent()).toMatchObject({ timestamp: '2023-11-14T22:13:20.000Z' });
   });
 
-  it('sends the dedup id nowhere', async () => {
-    await posthog(credentials).track('purchase', {}, context({ dedupId: 'order-1' }), noop);
+  it('sends the dedup id as uuid, the field PostHog deduplicates on', async () => {
+    const dedupId = '018daf23-89b3-7cf8-a4f1-94064c96df90';
+
+    await posthog(credentials).track('purchase', {}, context({ dedupId }), noop);
+
+    expect(sent()).toMatchObject({ uuid: dedupId });
+  });
+
+  it('omits uuid entirely when the host gave no dedup id', async () => {
+    await posthog(credentials).track('purchase', {}, context(), noop);
+
+    expect(sent().uuid).toBeUndefined();
+  });
+
+  it('still sends when the dedup id is not a UUID, and says why it was dropped', async () => {
+    // PostHog rejects a uuid of another shape rather than ignoring it, so
+    // forwarding an order id would trade a visible duplicate for no event.
+    const report = vi.fn();
+
+    await posthog(credentials).track('purchase', {}, context({ dedupId: 'order-1' }), report);
 
     expect(JSON.stringify(sent())).not.toContain('order-1');
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(report).toHaveBeenCalledWith(expect.stringContaining('not a UUID') as string);
+  });
+
+  it('takes a v4 uuid as readily as a v7 one', async () => {
+    const dedupId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+
+    await posthog(credentials).track('purchase', {}, context({ dedupId }), noop);
+
+    expect(sent()).toMatchObject({ uuid: dedupId });
   });
 
   it('wraps person properties in $set inside properties', async () => {

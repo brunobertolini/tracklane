@@ -57,7 +57,31 @@ function anonymousId(cookies: Record<string, string>, apiKey: string): string | 
 }
 
 /**
+ * PostHog deduplicates on `uuid`, and the field holds a UUID rather than any
+ * string: an invalid one is documented as dropped on ingestion, and has been
+ * reported answering 400 instead. Since `dedupId` is whatever the host chose
+ * — Meta's `event_id` takes anything, and this library's own example is an
+ * order id — forwarding it unchecked would turn a duplicated purchase into no
+ * purchase at all.
+ *
+ * Accepts any RFC 4122 layout rather than v4 alone, because v7 is what a
+ * system minting ids today tends to produce.
+ */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
  * PostHog on the server, through the Capture API.
+ *
+ * **Deduplicating a retried webhook takes two things, not one.** `dedupId`
+ * becomes PostHog's `uuid`, and PostHog collapses events sharing `uuid`, event
+ * name, timestamp and `distinct_id` — so a `timestamp` left to default to the
+ * clock differs on the retry and nothing is deduplicated. Pin it to a value
+ * derived from the order, as below. The `dedupId` itself must be a UUID:
+ * anything else is reported through `onError` and sent without the field,
+ * because PostHog rejects other shapes rather than ignoring them.
+ *
+ * Deduplication is also eventual, happening during a background merge, so both
+ * rows are visible for a while and a test that counts immediately will fail.
  *
  * @param credentials - The project API key, and the ingestion host for
  * anything other than PostHog's default US Cloud instance.
@@ -72,9 +96,13 @@ function anonymousId(cookies: Record<string, string>, apiKey: string): string | 
  *   providers: [posthog({ apiKey: process.env.POSTHOG_API_KEY! })],
  * });
  *
+ * // Both fields come from the order, so the payment provider's second
+ * // delivery of the same webhook produces the same event.
  * await track('purchase', order, {
  *   user: { userId: order.userId },
  *   cookies: request.headers.get('cookie'),
+ *   dedupId: order.eventId, // a UUID your checkout minted with the order
+ *   timestamp: order.paidAt,
  * });
  * ```
  */
@@ -96,7 +124,7 @@ export function posthog(
       name: string,
       data: EventData,
       context: ResolvedContext,
-      _report: (message: string) => void,
+      report: (message: string) => void,
     ): Promise<void> {
       // PostHog has one identity slot, distinct_id — not two the way GA4 has
       // a required client_id plus an optional user_id. PostHog's own
@@ -121,15 +149,31 @@ export function posthog(
       // body — kept separate from the identifiers used to match someone.
       if (context.traits) properties.$set = context.traits;
 
+      // The deduplication key is `uuid`, and it is the whole quartet of
+      // `uuid`, event name, timestamp and distinct_id that PostHog collapses,
+      // eventually, during a background merge. So this field alone does not
+      // make a retry idempotent: the host has to pin `context.timestamp` to
+      // something derived from the order rather than let it default to the
+      // clock. That is documentation's job, not this adapter's.
+      const dedup: { uuid?: string } = {};
+      if (context.dedupId !== undefined) {
+        if (UUID.test(context.dedupId)) {
+          dedup.uuid = context.dedupId;
+        } else {
+          // Sent anyway, without the field. The alternative is the vendor
+          // dropping the whole event over an id shape, which trades a visible
+          // duplicate for an invisible absence.
+          report(
+            'dedupId is not a UUID, so it was not forwarded as uuid: PostHog deduplicates on that field and rejects other shapes, so this event can duplicate on a retry',
+          );
+        }
+      }
+
       const body = {
         api_key: apiKey,
         event: name,
         distinct_id: id,
-        // The Capture API documents no deduplication key at all — not even
-        // one under a vendor-specific name, the way Meta, LinkedIn and X
-        // each have. `dedupId` maps to nothing here for the same reason it
-        // maps to nothing for GA4: there is no field to put it in.
-        //
+        ...dedup,
         // context.url, context.ip and context.userAgent are not forwarded
         // either. PostHog documents override properties for some of these
         // on other surfaces, but nothing found here confirms one for this
