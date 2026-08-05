@@ -187,6 +187,44 @@ describe('createConsent — answering', () => {
   });
 });
 
+describe('createConsent — forgetting', () => {
+  it('erases the record and returns to unanswered', () => {
+    const storage = cookieStorage();
+    const consent = createConsent({
+      categories: { analytics: 'denied', marketing: 'denied' },
+      storage,
+    });
+    consent.answer({ analytics: 'granted', marketing: 'granted' });
+
+    consent.forget();
+
+    expect(consent.answered).toBe(false);
+    expect(storage.read()).toBeNull();
+  });
+
+  it('resets to the configured defaults, not to all-denied', () => {
+    const consent = createConsent({ categories: { analytics: 'granted', marketing: 'denied' } });
+    consent.answer({ analytics: 'denied', marketing: 'denied' });
+
+    consent.forget();
+
+    // The visible cost of the decision: a granted default comes back. That is
+    // what "before answering" means, and why forget is not withdrawal.
+    expect(consent.state).toEqual({ analytics: 'granted', marketing: 'denied' });
+  });
+
+  it('notifies subscribers, so a live provider list can recompose', () => {
+    const consent = createConsent({ categories: { analytics: 'granted', marketing: 'denied' } });
+    consent.answer({ analytics: 'denied', marketing: 'denied' });
+    const listener = vi.fn();
+    consent.subscribe(listener);
+
+    consent.forget();
+
+    expect(listener).toHaveBeenCalledWith({ analytics: 'granted', marketing: 'denied' });
+  });
+});
+
 describe('selectProviders', () => {
   const state = { analytics: 'granted', marketing: 'denied' } as const;
 

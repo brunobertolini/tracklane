@@ -195,6 +195,17 @@ export function consentedTracking<C extends string>(
 
       for (const listener of listeners) listener(store.state);
     },
+    // The same four steps in the same order, and all four are load-bearing:
+    // rebuilding without the signal would leave the previous denial standing
+    // in GA4's consent mode while the tags it gated re-enter under defaults
+    // that grant them.
+    forget() {
+      store.forget();
+      instance = build(store.state);
+      instance.consent('update', collapse(store.state));
+
+      for (const listener of listeners) listener(store.state);
+    },
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);

@@ -115,6 +115,43 @@ describe('consentedTracking', () => {
     });
   });
 
+  it('rebuilds on forget, so a provider granted by default returns', () => {
+    const gated = fakeProvider('gated');
+
+    const { track, consent } = consentedTracking({
+      categories: PERMISSIVE,
+      providers: [{ provider: gated, needs: 'marketing' }],
+    });
+
+    consent.answer({ analytics: 'granted', marketing: 'denied' });
+    track('purchase');
+    expect(gated.track).not.toHaveBeenCalled();
+
+    consent.forget();
+    track('purchase');
+
+    expect(consent.answered).toBe(false);
+    expect(gated.track).toHaveBeenCalledOnce();
+  });
+
+  it('re-signals the defaults on forget, so no vendor holds the erased denial', () => {
+    const always = fakeProvider('always', { consent: vi.fn() });
+
+    const { consent } = consentedTracking({ categories: PERMISSIVE, providers: [always] });
+    consent.answer({ analytics: 'denied', marketing: 'denied' });
+
+    consent.forget();
+
+    // Rebuilding without this leaves the denial standing in the vendor's own
+    // consent mode while the tags it gated re-enter under granted defaults.
+    expect(always.consent).toHaveBeenLastCalledWith('update', {
+      analytics_storage: 'granted',
+      ad_storage: 'granted',
+      ad_user_data: 'granted',
+      ad_personalization: 'granted',
+    });
+  });
+
   it('never calls consent(update) before an answer', () => {
     const always = fakeProvider('always', { consent: vi.fn() });
 

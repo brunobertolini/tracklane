@@ -116,7 +116,20 @@ export interface Consent<C extends string> {
    * visitor actually decided.
    */
   answer(record: Record<C, ConsentDecision>): void;
-  /** Notified after `answer`, with the new `state`. Returns a function that unsubscribes. */
+  /**
+   * Erases the stored answer, so the visitor is asked again.
+   *
+   * **This is not how consent is withdrawn.** Withdrawal is `answer` with
+   * the denials, which records a decision and forwards it. Forgetting
+   * returns `state` to the configured defaults, so where those are
+   * `granted` it re-enables the categories a denial had switched off, until
+   * the visitor answers again.
+   */
+  forget(): void;
+  /**
+   * Notified after `answer` and after `forget`, with the new `state`.
+   * Returns a function that unsubscribes.
+   */
   subscribe(listener: (state: Readonly<Record<C, ConsentDecision>>) => void): () => void;
 }
 
@@ -167,6 +180,15 @@ export function createConsent<C extends string>(config: CreateConsentOptions<C>)
       storage.write(serializeConsentValue(record));
       state = resolveState(categories, record);
       answered = true;
+      for (const listener of listeners) listener(state);
+    },
+    forget() {
+      storage.forget();
+      // Back to the defaults, which is what "before answering" means. An
+      // all-denied reset would be a state the host never configured and
+      // that `state` is documented never to hold.
+      state = resolveState(categories, {});
+      answered = false;
       for (const listener of listeners) listener(state);
     },
     subscribe(listener) {
