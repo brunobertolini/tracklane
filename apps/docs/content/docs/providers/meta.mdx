@@ -142,6 +142,13 @@ That includes `fbc`. Meta documents how to build one out of an `fbclid` in the U
 click timestamp this library does not have. If you want one, build it yourself and pass it as a
 cookie: `cookies: { _fbc: 'fb.1.<timestamp>.<fbclid>' }`.
 
+**The request body is `application/x-www-form-urlencoded`**, with the event payload as the `data`
+field, which is the contract Meta's own examples document. The Graph API takes JSON too, so this
+only matters when you are reading a captured request or writing a test double that asserts on the
+body. The reason for the form encoding is worth knowing: the access token travels as a field
+rather than a query parameter, which keeps it out of proxy and APM logs. GA4's protocol offers no
+such option, and its credentials do end up in those logs.
+
 ### What maps where
 
 | Context or data | Meta receives |

@@ -118,17 +118,85 @@ put in the request, and inventing one would orphan the event on both sides.
 `context.traits` travels as `$set` inside `properties`, the same job GA4's `user_properties` does
 in its own body — separate from the identifier used to match someone.
 
+### Deduplicating a retried webhook
+
+`dedupId` becomes PostHog's `uuid`, which is the field it deduplicates on. **Two things have to be
+true, and only one of them is ours.**
+
+```ts
+await track('purchase', order, {
+  user: { userId: order.userId },
+  dedupId: order.eventId, // a UUID your checkout minted with the order
+  timestamp: order.paidAt, // from the order, not from the clock
+});
+```
+
+PostHog collapses events that share `uuid`, event name, **timestamp** and `distinct_id`. Left
+alone, `timestamp` defaults to the moment of the call, so the retry carries a different one and
+nothing is deduplicated. Pin it to a value derived from the order and the second delivery produces
+the same event.
+
+**The id must be a UUID.** PostHog rejects other shapes rather than ignoring them, so a `dedupId`
+that is an order number or a payment reference is not forwarded — the event still sends, and you
+get one line through `onError` saying why. Mint a UUID with the order and use that as your
+`dedupId` everywhere; Meta and the others accept it just as happily.
+
+Deduplication is also **eventual**: it happens during a background merge, so both rows are visible
+for a while. A test that sends twice and immediately counts one will fail even when everything is
+correct.
+
+### Linking an anonymous visitor to a signed-in one
+
+A server conversion for a signed-in visitor lands on the `userId` person. The anonymous session
+that actually produced the sale — the campaign, the browsing before login — stays a **separate
+person** unless something links them. If your browser `identify()` always runs before anything
+valuable happens, PostHog has already done this and there is nothing to do here.
+
+When it may not have run, the link is one call, made once, at the moment both ids are first known.
+It is not something this library does for you, and that is deliberate: PostHog's guidance for
+backends is `alias`, once, and a merge repeated per event is both a billing decision and an
+irreversible one.
+
+```ts
+// Store the anonymous id while the browser still has it, the same way you store
+// GA4's cookies for a later webhook.
+const anonymousId = JSON.parse(
+  decodeURIComponent(cookies[`ph_${apiKey}_posthog`]),
+).distinct_id;
+
+// Then once, when they sign in or the order is created:
+await fetch('https://us.i.posthog.com/i/v0/e/', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({
+    api_key: apiKey,
+    event: '$create_alias',
+    distinct_id: userId,
+    properties: { alias: anonymousId },
+  }),
+});
+```
+
+Two things to know before you wire it up. A merge is **refused** when the anonymous id was already
+claimed by another identified person, and that refusal never appears in the HTTP response — it
+shows up as an ingestion warning in PostHog's own interface, so a shared device degrades quietly.
+And merges cannot be undone except by hand, so a stale or mis-forwarded cookie is a permanent
+wrong join.
+
 ## The traps
 
 - **The distinct_id has to match across your two calls.** A browser
   `identify({ userId: 'user-42' })` and a server event sent with a different `distinct_id` for the
   same person creates two people in PostHog instead of one. Pass the same `userId` on both sides
   once it is known.
-- **There is no deduplication key.** A host sending the same event from both the browser and the
-  server will double-count. Meta, LinkedIn, X and TikTok each document a field for matching the
-  two halves of one action; PostHog and GA4 document none, so `dedupId` maps nowhere here for the
-  same reason it maps nowhere there. It still travels through the library on every call, ready the
-  day PostHog documents one.
+- **The deduplication key is not only the id.** `uuid` alone does not make a retry idempotent, and
+  the timestamp is the half people miss. See [above](#deduplicating-a-retried-webhook). The browser
+  half is different again: `capture()` takes no dedup key from its options, so `dedupId` maps
+  nowhere there.
+- **A `dedupId` that never arrives looks exactly like one that worked.** The value is usually minted
+  somewhere in a checkout and read somewhere else, and the two places drift. Nothing here can tell
+  the difference between "the host does not deduplicate" and "the host meant to and the field is
+  `undefined`". Look at the request that actually left before believing a dedup id is in it.
 - **The server half sends no request context.** `context.url`, `context.ip`, `context.userAgent`,
   `context.source` and `context.consent` are not forwarded. PostHog does define `$ip` and
   `$current_url` as ordinary properties, but this endpoint's own reference does not state them

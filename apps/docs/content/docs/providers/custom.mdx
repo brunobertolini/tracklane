@@ -96,6 +96,53 @@ milliseconds whatever the caller passed. It carries `user`, `cookies`, `dedupId`
 `source`, `url`, `ip`, `userAgent`, `traits` and `consent`. Take what your vendor documents and
 ignore the rest. See the [API reference](/docs/api-reference/) for the full shape.
 
+## Disagreeing with a shipped provider, without replacing it
+
+You do not have to choose between using a provider as it comes and rewriting it. **A provider is a
+plain object**, so wrap one and delegate the rest:
+
+```ts
+const base = posthog({ apiKey });
+
+const patched: ServerProvider = {
+  ...base,
+  async track(name, data, context, report) {
+    const user = context.user ?? (await myOwnLookup(context));
+    await base.track(name, data, { ...context, user }, report);
+  },
+};
+```
+
+Every other behaviour in the shipped provider is kept and keeps being maintained here: the cookie
+parsing, the field placements, the error text that names the vendor's own field. On the browser
+half, `identify` and `consent` are optional, so a vendor whose identity belongs in your own base
+snippet needs no wrapper at all.
+
+**Where this stops.** Delegation reaches what a provider *reads* — the context, the data, the event
+name, the bindings. It does not reach a field the adapter builds inside `track`. There are three
+cases and only one of them is yours:
+
+| You disagree with | What to do |
+| --- | --- |
+| What the provider **reads** | Wrap it, as above |
+| What the provider **sends** | That is our bug. [Open an issue](https://github.com/brunobertolini/tracklane/issues) |
+| A **verb the contract does not have** | A question about the contract. Open an issue too |
+
+The third one is easy to mistake for the second. Adding a field to a request we already send is a
+payload disagreement; performing a second operation the contract has no method for is not, and the
+answer there is usually that the operation belongs in your own code, once, rather than inside every
+`track`.
+
+**One trap, and it is the expensive one.** A wrap that hands over an identifier you **stored** is
+the supported shape. A wrap that **fabricates** one is the thing the shipped providers refuse to do,
+and wrapping does not make it safe — patching `context.cookies` with an invented `_ga` produces a
+`204` and nothing in any GA4 report. If you need identity in a place the browser is not,
+[store it and hand it back](/docs/providers/ga4#when-there-is-no-browser-webhooks-and-visitors-without-cookies).
+
+A wrapped provider is outside the conformance suite, with the same freedom and the same
+responsibility a hand-written vendor call carries. And if two people write the same wrap, the
+shipped provider is wrong: tell us, and it stops being your problem.
+
 ## Three rules worth following
 
 **Map to nothing rather than to something invented.** If your vendor has no slot for a concept,

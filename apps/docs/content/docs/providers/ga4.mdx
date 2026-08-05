@@ -84,6 +84,51 @@ Without the visitor cookie the library **refuses to send** and tells you why: th
 request to make, and the endpoint would have answered success anyway. Without the session cookie
 it sends and warns, because the event will be accepted and appear in no report.
 
+**Wire up `onError` before you rely on any of this.** It is optional in the type and it is not
+optional in practice: without it the library is silent, exactly as a hand-written `fetch` would be,
+and a conversion dropped for a missing cookie tells nobody.
+
+### When there is no browser: webhooks, and visitors without cookies
+
+`cookies` reads like "the cookies on this request", and for a route handler it is. For a payment
+webhook firing hours later there is no request to read from — and the same gap appears for
+visitors behind an ad blocker, inside an in-app webview, or under a consent answer that kept the
+tag from ever running.
+
+The answer is to store the two values while the browser has them and hand them back later:
+
+```ts
+// The container suffix is your measurement id without the `G-`. It is not the
+// numeric "Stream ID" the GA4 interface shows you.
+const container = measurementId.replace(/^G-/, '');
+
+// In the browser, at a moment the session exists: checkout start, sign-in, add to cart.
+saveWithTheOrder({ ga: cookies._ga, gaSession: cookies[`_ga_${container}`] });
+
+// In the webhook, later, with no browser in sight.
+await track('purchase', order, {
+  cookies: { _ga: order.ga, [`_ga_${container}`]: order.gaSession },
+  user: { userId: order.userId },
+  timestamp: order.paidAt,
+});
+```
+
+Two details decide whether this works, and both fail silently:
+
+- **`_ga` must be the whole cookie value**, `GA1.<n>.<a>.<b>`, not the client id on its own. The
+  adapter parses the cookie's shape, and a stripped value fails the same way a missing one does.
+- **The session cookie's suffix is the measurement id with `G-` removed.** The "Stream ID" in the
+  GA4 admin is a different, numeric thing. Storing that one persists `undefined`, and you get an
+  event that is accepted and appears nowhere.
+
+**What not to do instead:** generate a `client_id` when the cookie is absent. The Measurement
+Protocol accepts any string, so it looks like it works, and it does not. A request with no `_ga`
+has no session cookie either, and an event with no session is accepted and shows up in no report —
+so you get a `204`, a satisfied warning, and no measurement. Making it visible means generating a
+session too, and then every send is a brand new unattributed user, permanently inflating the user
+count of your property. A gap you can see beats a number you cannot trust, which is why this
+library will not invent either value for you.
+
 ## The traps
 
 GA4 is unusual among the vendors here: **it fails by accepting.** A `204` means the request
