@@ -290,6 +290,11 @@ deduplication stops matching.
   request and disliked part of it. The library reports those through `onError` as a warning with
   the `fbtrace_id`; look them up in Events Manager, because the reason is not in the response you
   can log.
+- **A 400 says why, and the reason is in the body.** Unlike the warnings above, a refusal is
+  explained in the response: `error.code`, `error_subcode` and a message naming the parameter.
+  That body reaches you on `error.cause.body`; see [Why the vendor
+  refused](/docs/installation#why-the-vendor-refused), including why every one of them lands in a
+  single Sentry issue until you fingerprint them apart.
 - **The whole batch fails together**, which is a trap only if you also post to this endpoint
   yourself. Meta rejects the entire request when one event in it is invalid; this library never
   batches, so every `track()` call is one event in one request and can only take itself down.
