@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { conformsAsServerProvider } from '../conformance.js';
+import { isVendorResponseError } from '../index.js';
 import type { ResolvedContext } from '../server.js';
 import { ga4 } from './ga4.server.js';
 
@@ -206,6 +207,50 @@ describe('ga4 server', () => {
         message: expect.not.stringContaining('ana@example.com') as string,
       }),
     );
+  });
+
+  it('throws a VendorResponseError carrying the status and the vendor’s own body', async () => {
+    // ADR-0013: a refusal carries the vendor's own answer, so the host has
+    // somewhere to go from "it failed" — identical shape across the three
+    // server providers, so this is a contract test, not a GA4 one.
+    const body =
+      '{"validationMessages":[{"fieldPath":"events[0].name","description":"Value not allowed","validationCode":"VALUE_INVALID"}]}';
+    fetchMock.mockResolvedValue(new Response(body, { status: 500 }));
+
+    const error: unknown = await ga4(credentials)
+      .track('purchase', {}, context(), noop)
+      .catch((thrown: unknown) => thrown);
+
+    expect(isVendorResponseError(error)).toBe(true);
+    expect(error).toMatchObject({ provider: 'ga4', status: 500, body });
+  });
+
+  it('keeps the message free of the body and the vendor’s own validation code', async () => {
+    // The two surfaces ADR-0013 draws apart: `cause`/`body` may quote the
+    // request back, `message` never does.
+    fetchMock.mockResolvedValue(
+      new Response('{"validationMessages":[{"validationCode":"VALUE_INVALID"}]}', {
+        status: 500,
+      }),
+    );
+
+    const error: unknown = await ga4(credentials)
+      .track('purchase', {}, context(), noop)
+      .catch((thrown: unknown) => thrown);
+
+    expect((error as Error).message).toBe('ga4: the Measurement Protocol answered 500');
+    expect((error as Error).message).not.toContain('VALUE_INVALID');
+    expect((error as Error).message).not.toContain('validationMessages');
+  });
+
+  it('does not wrap the missing-client_id precondition as a VendorResponseError', async () => {
+    // There is no response to carry: ADR-0013 keeps precondition throws
+    // bare, and this is one of the three ADR-0012 already covers.
+    const error: unknown = await ga4(credentials)
+      .track('purchase', {}, context({ cookies: {} }), noop)
+      .catch((thrown: unknown) => thrown);
+
+    expect(isVendorResponseError(error)).toBe(false);
   });
 });
 

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { conformsAsServerProvider } from '../conformance.js';
+import { isVendorResponseError } from '../index.js';
 import type { ResolvedContext } from '../server.js';
 import { meta } from './meta.server.js';
 
@@ -279,6 +280,50 @@ describe('meta server', () => {
         message: expect.not.stringContaining('ana@example.com') as string,
       }),
     );
+  });
+
+  it('throws a VendorResponseError carrying the status and the vendor’s own body', async () => {
+    // ADR-0013: a refusal carries the vendor's own answer, so the host has
+    // somewhere to go from "it failed". The Graph API put the reason in the
+    // body, and the adapter used to read it never.
+    const body =
+      '{"error":{"message":"Invalid parameter","code":100,"error_user_msg":"Do not do that"}}';
+    fetchMock.mockResolvedValue(new Response(body, { status: 400 }));
+
+    const error: unknown = await meta(credentials)
+      .track('Purchase', {}, context(), noop)
+      .catch((thrown: unknown) => thrown);
+
+    expect(isVendorResponseError(error)).toBe(true);
+    expect(error).toMatchObject({ provider: 'meta', status: 400, body });
+  });
+
+  it('keeps the message free of the body and the vendor’s own error code', async () => {
+    // The two surfaces ADR-0013 draws apart: `cause`/`body` may quote the
+    // request back, `message` never does. A regression that moved the body,
+    // or just the vendor's numeric error code, into the message would slip
+    // past a looser assertion than this one.
+    fetchMock.mockResolvedValue(
+      new Response('{"error":{"message":"Invalid parameter","code":100}}', { status: 400 }),
+    );
+
+    const error: unknown = await meta(credentials)
+      .track('Purchase', {}, context(), noop)
+      .catch((thrown: unknown) => thrown);
+
+    expect((error as Error).message).toBe('meta: the Conversions API answered 400');
+    expect((error as Error).message).not.toContain('Invalid parameter');
+    expect((error as Error).message).not.toContain('100');
+  });
+
+  it('does not wrap the missing-user_data precondition as a VendorResponseError', async () => {
+    // There is no response to carry: ADR-0013 keeps precondition throws
+    // bare, and this is one of the three ADR-0012 already covers.
+    const error: unknown = await meta(credentials)
+      .track('Purchase', {}, context({ cookies: {} }), noop)
+      .catch((thrown: unknown) => thrown);
+
+    expect(isVendorResponseError(error)).toBe(false);
   });
 
   it('reports a warning about a send that already succeeded', async () => {

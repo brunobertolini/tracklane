@@ -3,6 +3,7 @@
 // telling us the contract is incomplete, which is a conversation rather than
 // a reason to reach inside.
 import type { EventBinding, EventData, ResolvedContext, ServerProvider } from '../index.js';
+import { VendorResponseError } from '../index.js';
 
 const DEFAULT_HOST = 'https://us.i.posthog.com';
 
@@ -192,9 +193,15 @@ export function posthog(
       });
 
       if (!response.ok) {
-        // The status only. The event carries raw personal data, and no
-        // library-owned surface re-emits it into a host's logs.
-        throw new Error(`posthog: the capture endpoint answered ${response.status}`);
+        // The message stays free of the payload; the body rides on the
+        // error for a host that asks (ADR-0013). A body that will not read
+        // must not replace the real failure with a different one.
+        const body = await response.text().catch(() => '');
+        throw new VendorResponseError(`posthog: the capture endpoint answered ${response.status}`, {
+          provider: 'posthog',
+          status: response.status,
+          body,
+        });
       }
     },
   };

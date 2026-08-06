@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { conformsAsServerProvider } from '../conformance.js';
+import { isVendorResponseError } from '../index.js';
 import type { ResolvedContext } from '../server.js';
 import { posthog } from './posthog.server.js';
 
@@ -165,6 +166,48 @@ describe('posthog server', () => {
         message: expect.not.stringContaining('do-not-leak') as string,
       }),
     );
+  });
+
+  it('throws a VendorResponseError carrying the status and the vendor’s own body', async () => {
+    // ADR-0013: a refusal carries the vendor's own answer, so the host has
+    // somewhere to go from "it failed" — identical shape across the three
+    // server providers, so this is a contract test, not a PostHog one.
+    const body =
+      '{"type":"validation_error","code":"invalid_payload","detail":"missing distinct_id"}';
+    fetchMock.mockResolvedValue(new Response(body, { status: 500 }));
+
+    const error: unknown = await posthog(credentials)
+      .track('purchase', {}, context(), noop)
+      .catch((thrown: unknown) => thrown);
+
+    expect(isVendorResponseError(error)).toBe(true);
+    expect(error).toMatchObject({ provider: 'posthog', status: 500, body });
+  });
+
+  it('keeps the message free of the body and the vendor’s own error code', async () => {
+    // The two surfaces ADR-0013 draws apart: `cause`/`body` may quote the
+    // request back, `message` never does.
+    fetchMock.mockResolvedValue(
+      new Response('{"type":"validation_error","code":"invalid_payload"}', { status: 500 }),
+    );
+
+    const error: unknown = await posthog(credentials)
+      .track('purchase', {}, context(), noop)
+      .catch((thrown: unknown) => thrown);
+
+    expect((error as Error).message).toBe('posthog: the capture endpoint answered 500');
+    expect((error as Error).message).not.toContain('invalid_payload');
+    expect((error as Error).message).not.toContain('validation_error');
+  });
+
+  it('does not wrap the missing-distinct_id precondition as a VendorResponseError', async () => {
+    // There is no response to carry: ADR-0013 keeps precondition throws
+    // bare, and this is one of the three ADR-0012 already covers.
+    const error: unknown = await posthog(credentials)
+      .track('purchase', {}, context({ cookies: {} }), noop)
+      .catch((thrown: unknown) => thrown);
+
+    expect(isVendorResponseError(error)).toBe(false);
   });
 });
 

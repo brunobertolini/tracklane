@@ -108,6 +108,7 @@ onError: (error) => {
   // error.severity  'error': it did not arrive
   //                 'warning': it arrived, but something is worth knowing
   // error.message   what happened. Never the payload.
+  // error.cause     the original throw, where there was one
   report(error);
 };
 ```
@@ -116,5 +117,73 @@ The `warning` level exists because some vendors accept an event and then do noth
 it. Those are the cases you want to see; without them, the only symptom is a report that stays
 empty.
 
-Diagnostics never carry event contents. Events hold personal data by design, so piping `onError`
-straight to your logger cannot leak an email address.
+`error.message` never carries event contents. Events hold personal data by design, and that one
+line is the surface you can pipe straight to a logger.
+
+## Why the vendor refused
+
+A status code tells you a send failed. The vendor's own body tells you why, and that is what you
+need at 3am. It travels on `error.cause`:
+
+```ts
+import { isVendorResponseError } from 'tracklane';
+
+onError: (error) => {
+  if (isVendorResponseError(error.cause)) {
+    // error.cause.provider  'meta'
+    // error.cause.status    400
+    // error.cause.body      what the vendor said, verbatim
+  }
+  report(error);
+};
+```
+
+Use `isVendorResponseError` rather than `instanceof`. Two copies of this package in one
+`node_modules` produce two classes and one silent `false`; the guard reads a brand that survives
+both.
+
+<Callout type="warn">
+  `body` is the vendor's words, not ours, and some vendors quote the parameter they refused back
+  at you. Meta's Graph API does. So `cause.body` **can** contain event data where `message` never
+  does, and `provider`, `status` and `body` are ordinary properties: a logger you hand the whole
+  error to, and that serialises what it is given, takes the body with it. That is the decision
+  being handed to you rather than made for you. If you want the guarantee back, log
+  `error.message` and the fields you named.
+</Callout>
+
+Only a vendor's HTTP refusal carries one. A missing prerequisite the library cannot invent, like
+Meta with no identifier at all to build `user_data` from, throws before any request exists, so
+there is no response to carry.
+
+### Splitting one error into several in Sentry
+
+Every refusal in a provider throws from the same line, so Sentry groups them all into one issue:
+its default grouping uses the stack trace, and a stack that never varies never splits. Two
+unrelated Meta failures land under one title, and the title shows whichever arrived last.
+
+Put the vendor's own reason into the fingerprint and they separate:
+
+```ts
+// A refusal is not always JSON: a gateway between you and the vendor answers
+// HTML, and a parse that throws here would take out your reporter.
+const metaErrorCode = (body: string): string => {
+  try {
+    return String(JSON.parse(body)?.error?.code ?? 'unknown');
+  } catch {
+    return 'unparseable';
+  }
+};
+
+onError: (error) => {
+  const cause = error.cause;
+  if (!isVendorResponseError(cause)) return Sentry.captureException(error);
+
+  Sentry.captureException(cause, {
+    fingerprint: ['tracklane', cause.provider, String(cause.status), metaErrorCode(cause.body)],
+  });
+};
+```
+
+Sentry drops non-standard properties from an `Error` unless you add
+`extraErrorDataIntegration`, so `body` does not reach it by accident. Add that integration if you
+want the body on the issue, having read the warning above.

@@ -1,11 +1,13 @@
 /**
- * Types only: the vocabulary shared by both libraries, plus the two
- * provider contracts.
+ * The vocabulary shared by both libraries, the two provider contracts, and
+ * the one runtime symbol a provider throws: `VendorResponseError`.
  *
- * The runtime lives behind `tracklane/browser` and
+ * The rest of the runtime lives behind `tracklane/browser` and
  * `tracklane/server`. They are separate entry points because they
  * are separate libraries: no shared runtime, no shared state, nothing in
- * common but the vocabulary below. Importing one never pulls in the other.
+ * common but what this module exports. Importing one never pulls in the
+ * other, and a consumer of `tracklane/browser` still pulls in nothing from
+ * `VendorResponseError` beyond its class declaration.
  *
  * A provider written outside this package imports from here and needs
  * nothing else.
@@ -33,6 +35,7 @@ export type {
   BrowserTrackingOptions,
   TrackOptions,
 } from './browser.js';
+export { isVendorResponseError, VendorResponseError } from './errors.js';
 export type {
   EventContext,
   ResolvedContext,

@@ -9,6 +9,7 @@ import type {
   ResolvedContext,
   ServerProvider,
 } from '../index.js';
+import { VendorResponseError } from '../index.js';
 
 const ENDPOINT = 'https://www.google-analytics.com/mp/collect';
 
@@ -189,9 +190,15 @@ export function ga4(
       });
 
       if (!response.ok) {
-        // The status only. The event carries raw personal data, and no
-        // library-owned surface re-emits it into a host's logs.
-        throw new Error(`ga4: the Measurement Protocol answered ${response.status}`);
+        // The message stays free of the payload; the body rides on the
+        // error for a host that asks (ADR-0013). A body that will not read
+        // must not replace the real failure with a different one.
+        const body = await response.text().catch(() => '');
+        throw new VendorResponseError(`ga4: the Measurement Protocol answered ${response.status}`, {
+          provider: 'ga4',
+          status: response.status,
+          body,
+        });
       }
     },
   };

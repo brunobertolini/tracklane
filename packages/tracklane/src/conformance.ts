@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import type { BrowserProvider } from './browser.js';
+import { isVendorResponseError } from './errors.js';
 import type { ResolvedContext, ServerProvider } from './server.js';
 import type { EventData, ProviderDefault } from './vocabulary.js';
 
@@ -184,13 +185,28 @@ export function conformsAsServerProvider(options: {
     expect(without).not.toContain('DEDUP-XYZ');
   });
 
-  it('throws when the vendor did not accept the send', async () => {
+  it('throws a VendorResponseError when the vendor did not accept the send', async () => {
     // Adapters stay honest and loud. Swallowing a non-2xx is how a host ends
     // up believing it is measuring something, and the dispatcher is already
-    // there to isolate the throw and report it.
+    // there to isolate the throw and report it. ADR-0013 adds the shape: what
+    // reaches the host is recognised by `isVendorResponseError`, carrying the
+    // status and the body, not just any throw. The body itself is
+    // the caller's `fail()` hook to produce; a bodiless response is valid
+    // (the documented example does exactly that), so it is not asserted here.
     reset();
     fail();
 
-    await expect(create().track('purchase', STABLE_DATA, context(), noop)).rejects.toThrow();
+    let caught: unknown;
+    try {
+      await create().track('purchase', STABLE_DATA, context(), noop);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(isVendorResponseError(caught)).toBe(true);
+    if (isVendorResponseError(caught)) {
+      expect(typeof caught.status).toBe('number');
+      expect(typeof caught.body).toBe('string');
+    }
   });
 }

@@ -10,6 +10,7 @@ import type {
   ResolvedContext,
   ServerProvider,
 } from '../index.js';
+import { VendorResponseError } from '../index.js';
 
 const GRAPH = 'https://graph.facebook.com';
 
@@ -330,9 +331,15 @@ export function meta(
       });
 
       if (!response.ok) {
-        // The status only. The event carries raw personal data, and no
-        // library-owned surface re-emits it into a host's logs.
-        throw new Error(`meta: the Conversions API answered ${response.status}`);
+        // The message stays free of the payload; the body rides on the
+        // error for a host that asks (ADR-0013). A body that will not read
+        // must not replace the real failure with a different one.
+        const body = await response.text().catch(() => '');
+        throw new VendorResponseError(`meta: the Conversions API answered ${response.status}`, {
+          provider: 'meta',
+          status: response.status,
+          body,
+        });
       }
 
       // A body that will not parse must not turn a delivered conversion into

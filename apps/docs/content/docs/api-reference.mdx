@@ -33,9 +33,18 @@ expansion. An absent signal produces no key.
 
 ### `TrackingError`
 
-The one diagnostic channel. It never carries event contents.
+The one diagnostic channel. Its `message` never carries event contents.
 
 <AutoTypeTable path="../../packages/tracklane/src/vocabulary.ts" name="TrackingError" />
+
+### `VendorResponseError`
+
+What a server provider throws when the vendor's endpoint refuses the send, and what you find on
+`TrackingError.cause` for that case. It carries the vendor's own answer, which is the part a
+status code cannot tell you. Read it with `isVendorResponseError`, never `instanceof`, and read
+[Why the vendor refused](/docs/installation#why-the-vendor-refused) before logging `body`.
+
+<AutoTypeTable path="../../packages/tracklane/src/errors.ts" name="VendorResponseError" />
 
 ## Browser
 
