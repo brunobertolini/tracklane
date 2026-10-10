@@ -38,6 +38,7 @@ export function assertUniqueProviders(providers: readonly { name: string }[]): v
 export function resolveEvent<Target>(
   provider: Resolvable<Target>,
   name: string,
+  report?: (message: string) => void,
 ): Target | undefined {
   const events = provider.events;
   // `hasOwn`, not a plain lookup: every object inherits `constructor` and
@@ -47,7 +48,12 @@ export function resolveEvent<Target>(
 
   if (binding === null) return undefined;
   if (binding !== undefined) return binding;
-  if (provider.default === 'ignore') return undefined;
+  if (provider.default === 'ignore') {
+    report?.(
+      'event omitted: no conversion mapping; add a binding or null for an explicit exclusion',
+    );
+    return undefined;
+  }
 
   return name as Target;
 }

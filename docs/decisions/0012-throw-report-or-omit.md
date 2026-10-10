@@ -27,9 +27,11 @@ one is not decided again from scratch.
 **Throw when nothing was sent. `report` when something was sent and the caller should know
 something about it. Never the other way round.**
 
-That is the whole distinction, and everything else follows from it. A throw means "this event does
-not exist at the vendor". A `report` means "it arrived, and here is a caveat" — the missing GA4
-session, the dropped `dedupId`, Meta's warnings on an accepted payload.
+This distinguishes a pre-send refusal from a caveat about a send, not guaranteed delivery.
+A thrown transport error may occur after the vendor accepted the request. A browser command may
+only have entered the vendor's queue, and HTTP acceptance does not establish processing in its
+reports. `severity: 'error'` describes an observed failure; `warning` describes a caveat.
+Neither outcome alone authorizes a retry of an ambiguous conversion.
 
 The dispatcher isolates both, both reach the same `onError`, and neither reaches the caller of
 `track`. What differs is the claim being made, not the delivery. Which is why swapping them is

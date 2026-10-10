@@ -18,6 +18,24 @@ afterEach(() => {
 });
 
 describe('ga4 browser', () => {
+  it('leaves routing to the installed tag when no destination is configured', () => {
+    ga4().track('purchase', { value: 10, currency: 'BRL' }, {});
+
+    expect(calls).toEqual([['event', 'purchase', { value: 10, currency: 'BRL' }]]);
+  });
+
+  it('supports event mappings without an explicit destination', () => {
+    const provider = ga4({ events: { checkout: 'begin_checkout', internal: null } });
+    expect(provider.events).toEqual({ checkout: 'begin_checkout', internal: null });
+    provider.track('begin_checkout', { value: 10 }, {});
+    expect(calls).toEqual([['event', 'begin_checkout', { value: 10 }]]);
+  });
+
+  it('keeps native routing in the payload when the factory sets no destination', () => {
+    ga4().track('purchase', { send_to: 'configured-group' }, {});
+    expect(calls).toEqual([['event', 'purchase', { send_to: 'configured-group' }]]);
+  });
+
   it('sends the canonical name and data unchanged', () => {
     // The canonical vocabulary already is GA4's, which is why this vendor
     // ships no event map at all.
@@ -114,6 +132,17 @@ describe('ga4 browser', () => {
 describe('ga4 browser conformance', () => {
   conformsAsBrowserProvider({
     create: () => ga4('G-ABC'),
+    captured: () => calls,
+    reset: () => {
+      calls = [];
+    },
+  });
+});
+
+// Both factory forms owe the same browser provider invariants.
+describe('ga4 browser default-routing conformance', () => {
+  conformsAsBrowserProvider({
+    create: () => ga4(),
     captured: () => calls,
     reset: () => {
       calls = [];

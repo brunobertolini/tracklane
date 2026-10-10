@@ -63,8 +63,10 @@ function push(...args: unknown[]): void {
  * configures the property is yours. Use {@link ConsentState} through
  * `consent()` for changes after that.
  *
- * @param measurementId - The `G-` id of the data stream, matching the tag on
- * the page.
+ * With no measurement ID, events keep the tag's configured routing. Pass a
+ * measurement ID to address that destination through `send_to` instead.
+ * Neither form installs or configures the tag.
+ *
  * @param config - Rarely needed event name overrides.
  * @returns A provider for `createTracking` from `tracklane/browser`.
  *
@@ -73,13 +75,32 @@ function push(...args: unknown[]): void {
  * import { createTracking, ga4 } from 'tracklane/browser';
  *
  * // Google's own snippet is already in the page.
- * const { track } = createTracking({ providers: [ga4('G-XXXXXXX')] });
+ * const { track } = createTracking({ providers: [ga4()] });
  *
  * track('purchase', { transaction_id: 'T-1', value: 49.9, currency: 'BRL' });
  * ```
  */
-export function ga4(measurementId: string, config: Ga4BrowserConfig = {}): BrowserProvider {
-  const { events } = config;
+export function ga4(config?: Ga4BrowserConfig): BrowserProvider;
+/**
+ * Addresses one configured Google destination instead of using the tag's
+ * default routing. Existing calls keep their `send_to` behavior.
+ *
+ * @param measurementId - The `G-` ID of the configured data stream.
+ * @param config - Rarely needed event name overrides.
+ * @returns A provider for `createTracking` from `tracklane/browser`.
+ * @example
+ * ```ts
+ * const provider = ga4('G-XXXXXXX', { events: { my_event: 'my_ga4_name' } });
+ * ```
+ */
+export function ga4(measurementId: string, config?: Ga4BrowserConfig): BrowserProvider;
+export function ga4(
+  measurementIdOrConfig: string | Ga4BrowserConfig = {},
+  config: Ga4BrowserConfig = {},
+): BrowserProvider {
+  const measurementId =
+    typeof measurementIdOrConfig === 'string' ? measurementIdOrConfig : undefined;
+  const { events } = typeof measurementIdOrConfig === 'string' ? config : measurementIdOrConfig;
 
   return {
     name: 'ga4',
@@ -94,10 +115,9 @@ export function ga4(measurementId: string, config: Ga4BrowserConfig = {}): Brows
       // not exist in this vendor". Inventing a param would imply a merge
       // the platform never performs.
       //
-      // `send_to` is written after the host's data on purpose: without it,
-      // gtag sends to every configured property on the page, so the
-      // addressing is the adapter's to own and not the host's to override.
-      push('event', name, { ...data, send_to: measurementId });
+      // With an explicit destination, it wins over a payload's `send_to`.
+      // Without one, forward the manual call unchanged and let gtag route it.
+      push('event', name, measurementId === undefined ? data : { ...data, send_to: measurementId });
     },
 
     identify(user: UserData, traits?: Record<string, unknown>): void {

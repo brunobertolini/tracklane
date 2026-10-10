@@ -29,7 +29,8 @@ export const acme = (siteId: string): BrowserProvider => ({
 nothing a second registration could say that the first cannot.
 
 `default` decides what happens to an event you have no mapping for. `passthrough` sends the
-canonical name as-is; `ignore` stays silent. Use `ignore` **only** when your vendor mints event
+canonical name as-is; `ignore` sends nothing and warns through `onError` on each
+unmapped call. An explicit `null` remains silent. Use `ignore` **only** when your vendor mints event
 identifiers in its own dashboard, so no name could possibly be guessed. That is the case for
 LinkedIn and X, and it is the only honest reason to send nothing.
 
@@ -72,8 +73,9 @@ Meta's `contents` is ours, your database row becoming `items` is yours.
 at all: LinkedIn's conversion identity is an id minted per account in Campaign Manager, so the
 binding holds that id — `events: { purchase: '<conversionId>' }` with `default: 'ignore'`. The
 field is called `events` because that is what it binds, not because the value is always a spelling.
-Passing such an id through `data` instead sends nothing, silently, because the provider then has no
-binding for the event at all.
+Passing such an id through `data` instead leaves the event unmapped: it sends
+nothing and reports a warning through `onError`. Put the ID in `events`, or use
+`null` for an intentional, silent exclusion.
 
 ### Identity and consent
 
@@ -93,14 +95,20 @@ they refused.
 ## Server
 
 ```ts
-import type { ServerProvider } from 'tracklane';
+import { VendorResponseError, type ServerProvider } from 'tracklane';
 
 export const acme = (apiKey: string): ServerProvider => ({
   name: 'acme',
   default: 'passthrough',
   track: async (name, data, context, report) => {
     const response = await fetch('https://api.acme.com/events', { /* … */ });
-    if (!response.ok) throw new Error(`acme: ${response.status}`);
+    if (!response.ok) {
+      throw new VendorResponseError(`acme: ${response.status}`, {
+        provider: 'acme',
+        status: response.status,
+        body: await response.text().catch(() => ''),
+      });
+    }
     if (!context.user?.email) report('sent without an email; match rate will be low');
   },
 });
@@ -225,12 +233,15 @@ describe('my provider', () => {
     captured: () => fetchMock.mock.calls,
     reset: () => fetchMock.mockClear(),
     fail: () => fetchMock.mockResolvedValueOnce(new Response(null, { status: 500 })),
+    context: () => ({ cookies: {}, timestamp: 0 }),
   });
 });
 ```
 
 `vitest` is an optional peer dependency, so this costs you nothing unless you import it. There is a
-`conformsAsBrowserProvider` alongside it.
+`conformsAsBrowserProvider` alongside it. For a conversion-ID provider, also
+pass `target: '12345'` with the ID configured by `create`; the suite calls the
+provider with this already-resolved target. Without `target`, it uses `purchase`.
 
 **Run wrappers through it too.** A wrapped provider is an object the dispatcher cannot tell apart
 from any other, so it owes the same invariants — and on the server the suite is what catches the
@@ -243,7 +254,10 @@ send nothing. A made-up destination looks mapped and arrives nowhere, which is w
 honest absence.
 
 **Never put payload contents in an error.** Events carry raw personal data by design. Report the
-status, the event name and the vendor. Do not report the body.
+status, the event name and the vendor in the message. A server refusal carries
+the vendor's response separately in `VendorResponseError.status` and `.body`;
+the host chooses whether to inspect that response. Keep the outgoing event
+payload out of the message.
 
 **Buffer for yourself if your SDK needs it.** Every vendor shipped here queues its own commands
 until its script loads, so the core holds no queue for anyone. If yours arrives through a promise

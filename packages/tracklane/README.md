@@ -91,7 +91,7 @@ build, so it is never ahead of the library.
 | -------- | -------------------- | ------ |
 | GA4      | Measurement Protocol | shipped |
 | Meta     | Conversions API      | shipped |
-| LinkedIn | Conversions API      | next   |
+| LinkedIn | Conversions API      | shipped |
 | PostHog  | Capture API          | shipped |
 | X        | Conversions API      | next   |
 

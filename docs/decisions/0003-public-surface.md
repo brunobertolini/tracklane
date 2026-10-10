@@ -43,7 +43,7 @@ lets the browser call go back to being almost exactly the sketch.
 import { createTracking, ga4, meta } from 'tracklane/browser';
 
 const { track, identify, consent } = createTracking({
-  providers: [ga4('G-XXXXXXX'), meta('1234567890')],
+  providers: [ga4(), meta()],
 });
 
 track('purchase', { transaction_id: 'T-1', value: 99.9, currency: 'BRL' }, { dedupId: 'T-1' });
@@ -57,6 +57,12 @@ interface TrackOptions {
   dedupId?: string;
 }
 ```
+
+**GA4 routing amendment, 2026-10-10:** `ga4()` and `ga4({ events })` forward
+without adding `send_to`, preserving the installed tag's routing. Existing
+`ga4(measurementId, config?)` calls still select that configured destination.
+Neither form installs a tag or issues `config`. Server credentials remain
+required because the server has no installed tag to select a destination.
 
 Everything else a vendor needs here, it already has: the tags read their own cookies and hold
 their own session. `identify` forwards to the vendors that keep a user (`gtag('set')`,
@@ -248,10 +254,11 @@ and X send nothing when an event is unmapped — not silence by policy, but beca
 to make. A `null` entry means "never send this event here", which is how a host keeps an internal
 product event out of the ad platforms.
 
-**A development-time warning for that silence is owed, and lands with the first provider that
-uses `ignore`** — LinkedIn. Building the diagnostic before anything can trigger it would be
-guessing at what it should say; shipping LinkedIn without it would be the silent loss this
-library keeps finding elsewhere.
+An absent binding with `ignore` reports a payload-free warning through `onError`.
+An explicit `null` remains silent. This diagnostic lands with LinkedIn, the first
+provider that uses `ignore`. It is available in every environment; the host can
+attach its reporter only during development. The library neither guesses the
+host's environment nor writes to the console. Without `onError`, it stays silent.
 
 `events` is **required by the type** on `linkedin` and `x`: neither vendor has event names, only
 conversion rules minted per account in a dashboard.
@@ -260,7 +267,7 @@ That requirement lives on each of those factories' own config, not in `BrowserPr
 `ServerProvider`, where `events` is and stays optional — GA4 and PostHog ship none. The distinction
 matters because this paragraph reads like a guarantee of the core and is not one: a provider
 written elsewhere may declare `default: 'ignore'` and accept no map at all, and nothing in the
-contract stops it. What the core owes that case is the development-time warning above, which is why
+contract stops it. What the core owes that case is the warning above, which is why
 the two are decided together.
 
 ## Vendor levers live on the vendor's factory, and only there
@@ -295,12 +302,15 @@ which is the problem this library exists to remove.
 
 ## Known limitation
 
-**PostHog has no public deduplication key.** A host sending the same event from both halves will
-double-count there. There is nothing to implement — the identifier PostHog's own SDK generates is
-not in its public reference, and building on undocumented surface breaks silently in someone
-else's application when it changes. The PostHog page in the documentation states the consequence
-in full. The library's surface is already ready for the day it becomes documented: `dedupId`
-travels with every event, so it would be one line in that adapter and no public change.
+**PostHog has no shared browser/server deduplication key in Tracklane.**
+
+**Amended by [ADR-0009](0009-posthog-deduplication.md):** the server
+adapter forwards a UUID-shaped `dedupId` as `uuid`. Retrying requires the host
+to keep the UUID, event, distinct ID and timestamp fixed. This supersedes the
+original claim that neither surface had a supported key. The browser adapter
+does not forward that UUID, so this server retry contract does not establish
+browser/server deduplication. The provider page documents the two surfaces
+separately.
 
 ## Build order
 

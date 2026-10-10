@@ -115,7 +115,12 @@ function push(...args: unknown[]): void {
  * forwarded, because a key Meta does not read inside `contents` looks mapped
  * and arrives nowhere. That is the failure mode this project keeps finding.
  */
-function contents(items: readonly EventItem[]): Record<string, unknown>[] {
+function contents(items: readonly EventItem[]): Record<string, unknown>[] | undefined {
+  // All or none: a partial list would silently describe only part of the order.
+  // Check whitespace without rewriting the identifier the host supplied.
+  if (items.some((item) => typeof item.item_id !== 'string' || !item.item_id.trim()))
+    return undefined;
+
   return items.map((item) => {
     const content: Record<string, unknown> = {};
 
@@ -141,7 +146,11 @@ function pixelParams(data: EventData): Record<string, unknown> {
   const { items, ...rest } = data;
   const params: Record<string, unknown> = { ...rest };
 
-  if (items) params.contents = contents(items);
+  if (items) {
+    const mapped = contents(items);
+    if (mapped !== undefined) params.contents = mapped;
+    else delete params.contents;
+  }
 
   return params;
 }
@@ -208,6 +217,11 @@ function collapse(state: ConsentState): 'grant' | 'revoke' | undefined {
  * this adapter cannot deliver. Which pixels exist is declared by your snippet,
  * in `fbq('init')`.
  *
+ * If any item lacks a nonempty `item_id`, the complete `contents` list is
+ * omitted while totals and order metadata remain unchanged. This avoids
+ * presenting a partial order or inventing product identifiers. The error
+ * channel receives one payload-free warning after the browser command returns.
+ *
  * @param config - Event name overrides, merged over the built-in map.
  * @returns A provider for `createTracking` from `tracklane/browser`.
  *
@@ -230,7 +244,12 @@ export function meta(config: MetaBrowserConfig = {}): BrowserProvider {
     default: 'passthrough',
     events: { ...CANONICAL_EVENTS, ...config.events },
 
-    track(name: string, data: EventData, options: TrackOptions): void {
+    track(
+      name: string,
+      data: EventData,
+      options: TrackOptions,
+      report?: (message: string) => void,
+    ): void {
       // `track`, which is what a hand-written call is, and the only form Meta
       // documents the deduplication object for.
       //
@@ -246,7 +265,8 @@ export function meta(config: MetaBrowserConfig = {}): BrowserProvider {
       // reaches both. That is what `fbq('track')` does by hand, so this
       // replicates it rather than deciding otherwise on the host's behalf.
       const command = STANDARD_EVENTS.includes(name) ? 'track' : 'trackCustom';
-      const args: unknown[] = [command, name, pixelParams(data)];
+      const params = pixelParams(data);
+      const args: unknown[] = [command, name, params];
 
       // Meta's key is `eventID` here and `event_id` on the Conversions API,
       // matched together with the event name. The library never invents the
@@ -254,6 +274,9 @@ export function meta(config: MetaBrowserConfig = {}): BrowserProvider {
       if (options.dedupId !== undefined) args.push({ eventID: options.dedupId });
 
       push(...args);
+      if (data.items && params.contents === undefined) {
+        report?.('contents omitted: every item needs a nonempty item_id; totals were preserved');
+      }
     },
 
     consent(_command: 'default' | 'update', state: ConsentState): void {

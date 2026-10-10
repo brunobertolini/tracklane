@@ -93,8 +93,13 @@ the line simply would not exist. Not sending is the faithful replica of a line t
 written.
 
 The one thing the library adds is visibility, because by hand the absence is visible in the
-source and here it is not: a development-time warning, once per unmapped event. It changes
-nothing in production, and therefore does not change behaviour.
+source and here it is not.
+
+**Implementation clarification, 2026-10-10:** ADR-0003 supersedes the original
+proposal for a once-per-event development warning. Each unmapped call reports a
+warning through an attached `onError`, in any environment. The host chooses where
+to log it. No environment gate or warning deduplication exists, and an explicit
+`null` remains silent. This diagnostic does not change what is sent.
 
 ## Consent is mapping, not policy
 
@@ -121,8 +126,8 @@ The rules that follow:
   is not a third value to invent — no provider has one. It is the moment before the update.
 - **Where a provider has no consent mechanism, nothing happens for that provider.** LinkedIn
   has no command; by hand the only lever is not loading the tag, which is the application's
-  decision and stays the application's decision. This is the same shape as an unmapped event:
-  silent in production, warned once in development.
+  decision and stays the application's decision. This is a no-op in every environment;
+  it does not emit the unmapped-event diagnostic described above.
 - No queue, no buffer, no replay, and no consent state held by the library. It forwards a call
   and forgets it.
 

@@ -23,18 +23,25 @@ and by the time you hold the object `createTracking` returns, that moment has pa
 import { createTracking, ga4 } from 'tracklane/browser';
 
 const { track, identify, consent } = createTracking({
-  providers: [ga4('G-XXXXXXX')],
+  providers: [ga4()],
 });
 ```
 
-The measurement id must match the tag on the page. If the tag is missing, calls fail and are
-reported through `onError`, the same thing a hand-written `gtag(…)` would do.
+Without a measurement ID, the adapter adds no `send_to`: events follow the
+installed tag's configured routing, including its default destination group.
+Use `ga4('G-XXXXXXX')` to select one configured destination; the adapter then
+sets `send_to` on each event. Both forms require the host-installed tag. If it
+is missing, calls fail and are reported through `onError`, the same thing a
+hand-written `gtag(…)` would do. See [Google's routing documentation](https://developers.google.com/tag-platform/gtagjs/routing).
 
 This library handles every consent declaration *after* the initial one, through `consent()`.
 
 ### Optional configuration
 
 ```ts
+ga4({ events: { my_event: 'my_ga4_name' } });
+
+// Keep explicit routing when selecting one configured destination.
 ga4('G-XXXXXXX', { events: { my_event: 'my_ga4_name' } });
 ```
 
@@ -44,7 +51,7 @@ Rarely needed: GA4's names *are* the canonical vocabulary, so events pass throug
 
 | You call | GA4 receives |
 | --- | --- |
-| `track(name, data)` | `gtag('event', name, data)`, always addressed to your property |
+| `track(name, data)` | `gtag('event', name, data)`; an explicit factory ID adds `send_to` |
 | `identify({ userId })` | `gtag('set', { user_id })` |
 | `identify(user, traits)` | `gtag('set', 'user_properties', traits)` |
 | `consent(command, state)` | `gtag('consent', command, state)`, verbatim |

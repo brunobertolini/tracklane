@@ -27,7 +27,7 @@ export const { track, consent } = consentedTracking({
   categories: rulesFor('BR').defaults,
   providers: [
     ga4('G-XXXXXXX'),
-    { provider: meta('1234567890'), needs: 'marketing' },
+    { provider: meta(), needs: 'marketing' },
   ],
 });
 ```
@@ -170,7 +170,7 @@ Nothing fixes them. Name your categories whatever your business calls them:
 ```ts
 export const { track, consent } = consentedTracking({
   categories: { stats: 'granted', ads: 'granted' },
-  providers: [ga4('G-XXXXXXX'), { provider: meta('123'), needs: 'ads' }],
+  providers: [ga4('G-XXXXXXX'), { provider: meta(), needs: 'ads' }],
   consent: (state) => ({
     analytics_storage: state.stats,
     ad_storage: state.ads,

@@ -122,8 +122,9 @@ export type ProviderDefault = 'passthrough' | 'ignore';
  *
  * Fanning out to N vendors means no single call site can catch anything, so
  * this is the replica of the `try/catch` a host would have written around a
- * hand-made call. `severity` separates "this did not arrive" from "this
- * arrived, and here is something you should know".
+ * hand-made call. `severity` separates an observed failure from a caveat.
+ * Neither proves delivery: a browser command may only be queued, an HTTP
+ * success does not prove processing, and a network error may follow acceptance.
  *
  * It never carries event contents: the payload holds raw personal data by
  * design, and no library-owned surface re-emits it into a host's logs.
@@ -133,7 +134,7 @@ export interface TrackingError {
   provider: string;
   /** The canonical event name being sent when this happened. */
   event: string;
-  /** `'error'` when the event did not arrive; `'warning'` when it arrived but is worth a look. */
+  /** `'error'` for an observed failure; `'warning'` for a caveat. Neither guarantees delivery. */
   severity: 'error' | 'warning';
   /** What happened, in one line, excluding the payload: event data never appears here. */
   message: string;
