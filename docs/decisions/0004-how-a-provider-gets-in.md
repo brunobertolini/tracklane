@@ -73,7 +73,7 @@ The suite was built early because the consent work needed the invariants written
 The list above describes its intended coverage, not a claim that it covers every item.
 
 **Status update, 2026-10-10:** Meta, LinkedIn and PostHog now exist on both
-surfaces in this branch. Provider-specific tests still cover the invariants not
+surfaces. Provider-specific tests still cover the invariants not
 asserted by the shared suite; adding a provider does not itself complete that
 suite's coverage.
 
@@ -117,7 +117,7 @@ a passing test suite. `AGENTS.md` describes how to produce this; what changes he
 gates the merge rather than advising the author.
 
 The evidence must also state what the vendor report can confirm. In the
-LinkedIn verification recorded in the provider PR description, dedicated
+LinkedIn live verification, dedicated
 Purchase conversion rules became Active and their received-signal timestamps
 followed the captured built-adapter sends. The report and screenshots confirm
 receipt at the conversion-activity level. They do not expose individual event
@@ -125,6 +125,13 @@ IDs, counts, received values, identity matching or paid-ad attribution; none of
 those may be claimed as verified. The outgoing captures and vendor report are
 both still required. Verification captures, screenshots and review reports
 belong in the PR description or attachments, never in Git history.
+
+**PR #31 exception, 2026-10-10:** Bruno explicitly requested that this PR contain
+no test images or artifacts. Live verification was performed, and its scope is
+summarized in [PR #31](https://github.com/brunobertolini/tracklane/pull/31);
+captures and screenshots remain local outside Git and are not available in the
+PR. This exception changes where the evidence is kept, not the verification steps
+or what the vendor report can establish.
 
 Two consequences we accept:
 

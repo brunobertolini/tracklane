@@ -25,7 +25,7 @@
 | Server identity | `client_id` required `[C]` | ≥1 `user_data` field `[C]` | `distinct_id` required `[C]` | ≥1 identifier `[C]` | ≥1 identifier `[C]` |
 | Hashing required | no `[C]` | SHA-256, per-field normalisation `[C]` | no `[C]` | SHA-256 on email `[C]` | **server only** — pixel accepts raw and hashes itself `[I]` |
 | Consent API | `gtag('consent', …)`, 4 signals `[C]` | `fbq('consent', 'grant'\|'revoke')` + server LDU `[C]` | `opt_in_capturing()` / `opt_out_capturing()` `[C]` | **none** — controlled by loading or not loading the script `[I]` | Restricted Data Use flag, both surfaces `[I]` |
-| Client↔server dedup | no mechanism `[C]` | `event_id` + `event_name` `[C]` | not confirmed | `event_id` (browser) / `eventId` (API) `[I]` | `conversion_id` `[C]` |
+| Client↔server dedup | no mechanism `[C]` | `event_id` + `event_name` `[C]` | not confirmed | `event_id` (browser) / `eventId` (API) `[C]` | `conversion_id` `[C]` |
 
 ## Per provider
 
@@ -277,8 +277,7 @@ assumed.
 - GA4 Measurement Protocol: confirm the web variant (`measurement_id` + `client_id`).
 - Meta: whether the `user_data` minimum is any key or a contact-group key.
 - PostHog: whether an event deduplication key exists.
-- LinkedIn: confirm from an official source that no consent command exists, and confirm the
-  `eventId` casing in the Conversions API.
+- LinkedIn: confirm from an official source that no consent command exists.
 
 ## Sources
 

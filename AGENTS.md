@@ -54,10 +54,10 @@ non-goals) and `0003-public-surface.md` (the API it produced). Vendor facts:
 
 ## Where this stands
 
-**Done in this branch:** the core and GA4, Meta, LinkedIn and PostHog on both
+**Done:** the core and GA4, Meta, LinkedIn and PostHog on both
 halves, with live evidence from dedicated test resources. LinkedIn confirms
 receipt at the conversion-activity level, not individual event counts or values;
-see the provider PR description for evidence and verification scope. Plus
+see the LinkedIn provider page for the verification scope. Plus
 `@tracklane/consent` and `@tracklane/consent-rules`, which hold the visitor's
 answer and survey what a jurisdiction requires; the documentation site is their
 first host.
@@ -114,6 +114,10 @@ behaviour the types cannot express, and the declared provider list must match
 what the source actually contains. The conformance suite covers less than
 ADR-0004's list today, and that record says which part; the rest is still tested
 per provider until a second one makes the duplication real.
+
+For PR #31, Bruno explicitly requested no test images or artifacts in the PR.
+Keep its evidence locally outside Git; the PR contains only a validation summary.
+ADR-0004 records this exception to the evidence-attachment requirement.
 
 ## Documentation policy
 

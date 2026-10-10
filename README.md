@@ -40,7 +40,7 @@ Deciding which tools may run at all is your application's, and
 it: it holds the visitor's answer, and a companion package surveys what a jurisdiction requires.
 Both live outside the library, and the library never learns they exist.
 
-This branch includes browser and server adapters for **GA4**, **Meta**, **LinkedIn**
+Tracklane includes browser and server adapters for **GA4**, **Meta**, **LinkedIn**
 and **PostHog**. **X** is next. LinkedIn receipt was verified at the conversion-activity
 level; see its provider page for the verification limits. Any tool that receives
 events about what your users do can be a destination, using the same public contract.
