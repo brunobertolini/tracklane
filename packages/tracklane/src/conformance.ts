@@ -87,7 +87,8 @@ export function conformsAsBrowserProvider(options: {
   assertIdentity(create());
 
   it('reports absent mappings on ignore providers and keeps explicit exclusions silent', () => {
-    const provider = create();
+    // Mapping assertions do not exercise the host's installation hook.
+    const { install: _install, ...provider } = create();
     if (provider.default !== 'ignore') return;
     reset();
     const errors: { severity: string; event: string }[] = [];
