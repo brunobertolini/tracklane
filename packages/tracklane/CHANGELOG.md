@@ -1,5 +1,25 @@
 # tracklane
 
+## 0.7.0
+
+### Minor Changes
+
+- [#31](https://github.com/brunobertolini/tracklane/pull/31) [`1133438`](https://github.com/brunobertolini/tracklane/commit/1133438fb27e316d45653908789579c81e2ecf7a) Thanks [@brunobertolini](https://github.com/brunobertolini)! - Meta browser and server adapters now omit the complete contents list when any item lacks a nonempty item_id, preserving totals and order metadata instead of emitting incomplete contents. One payload-free omission warning reaches onError after the browser command or HTTP acceptance.
+
+  When canonical items are supplied, their translation takes precedence over a colliding contents property, including omission. Host-supplied contents still pass through when items are absent.
+
+  Browser providers can emit warnings through an optional fourth track argument; existing three-argument providers and calls remain compatible. TrackingError documentation now distinguishes observed errors and warnings from delivery guarantees.
+
+- [#31](https://github.com/brunobertolini/tracklane/pull/31) [`1133438`](https://github.com/brunobertolini/tracklane/commit/1133438fb27e316d45653908789579c81e2ecf7a) Thanks [@brunobertolini](https://github.com/brunobertolini)! - Add LinkedIn Insight Tag and Conversions API adapters, conversion mapping diagnostics, and configurable conformance targets.
+
+- [#31](https://github.com/brunobertolini/tracklane/pull/31) [`1133438`](https://github.com/brunobertolini/tracklane/commit/1133438fb27e316d45653908789579c81e2ecf7a) Thanks [@brunobertolini](https://github.com/brunobertolini)! - Allow the GA4 browser provider to use the installed tag's routing with `ga4()` or `ga4({ events })`. Existing `ga4(measurementId, config?)` calls keep selecting that destination through `send_to`. Server credentials remain required.
+
+### Patch Changes
+
+- [#31](https://github.com/brunobertolini/tracklane/pull/31) [`afd3e9d`](https://github.com/brunobertolini/tracklane/commit/afd3e9db456ef342b6c5428981fe51c5f6422ee9) Thanks [@brunobertolini](https://github.com/brunobertolini)! - Keep browser mapping conformance checks independent of host installation hooks, and clarify provider verification documentation.
+
+- [#31](https://github.com/brunobertolini/tracklane/pull/31) [`1133438`](https://github.com/brunobertolini/tracklane/commit/1133438fb27e316d45653908789579c81e2ecf7a) Thanks [@brunobertolini](https://github.com/brunobertolini)! - Correct provider documentation examples, describe unmapped-event diagnostics and PostHog server retry identifiers, and clarify the scope of LinkedIn live verification.
+
 ## 0.6.0
 
 ### Minor Changes
