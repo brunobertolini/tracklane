@@ -163,7 +163,7 @@ export const { track, consent } = consentedTracking({
   categories: rulesFor('BR').defaults,
   providers: [
     ga4('G-KARVI'),
-    { provider: meta('1234567890'), needs: 'marketing' },
+    { provider: meta(), needs: 'marketing' },
   ],
 });
 ```

@@ -111,6 +111,79 @@ describe('meta server', () => {
     });
   });
 
+  it.each([undefined, '', '   '])(
+    'omits all contents when an item has no usable id (%s)',
+    async (id) => {
+      const item: { item_id?: string; item_name: string; price: number; quantity: number } = {
+        item_name: 'PRIVATE-LABEL',
+        price: 5,
+        quantity: 1,
+      };
+      if (id !== undefined) item.item_id = id;
+      const data = {
+        value: 15,
+        currency: 'BRL',
+        transaction_id: 'T-1',
+        items: [{ item_id: 'SKU-1', price: 10, quantity: 1 }, item],
+      };
+      const before = JSON.stringify(data);
+      const warnings: string[] = [];
+      await meta(credentials).track('Purchase', data, context({ dedupId: 'event-1' }), (message) =>
+        warnings.push(message),
+      );
+      expect(fetchMock).toHaveBeenCalledOnce();
+      expect(sent()).toMatchObject({
+        event_id: 'event-1',
+        custom_data: { value: 15, currency: 'BRL', order_id: 'T-1' },
+      });
+      expect(sent().custom_data).toEqual({ value: 15, currency: 'BRL', order_id: 'T-1' });
+      expect(warnings).toEqual([
+        'contents omitted: every item needs a nonempty item_id; totals were preserved',
+      ]);
+      expect(JSON.stringify(warnings)).not.toContain('PRIVATE-LABEL');
+      expect(JSON.stringify(data)).toBe(before);
+    },
+  );
+
+  it('omits colliding contents when canonical items cannot be represented', async () => {
+    const warnings: string[] = [];
+    const data = {
+      value: 15,
+      currency: 'BRL',
+      items: [{ item_id: 'SKU-1' }, { item_name: 'Name only' }],
+      contents: [{ id: 'partial-order' }],
+    };
+    const before = JSON.stringify(data);
+    await meta(credentials).track('Purchase', data, context(), (message) => warnings.push(message));
+    expect(sent().custom_data).toEqual({ value: 15, currency: 'BRL' });
+    expect(warnings).toEqual([
+      'contents omitted: every item needs a nonempty item_id; totals were preserved',
+    ]);
+    expect(JSON.stringify(data)).toBe(before);
+  });
+
+  it('passes through host contents when no canonical items are supplied', async () => {
+    const warnings: string[] = [];
+    const data = { contents: [{ id: 'host-id' }] };
+    await meta(credentials).track('Purchase', data, context(), (message) => warnings.push(message));
+    expect(sent().custom_data).toEqual(data);
+    expect(warnings).toEqual([]);
+  });
+
+  it('preserves supplied ids and emits no omission warning for representable items', async () => {
+    const warnings: string[] = [];
+    await meta(credentials).track(
+      'Purchase',
+      { items: [{ item_id: ' SKU-1 ', price: 10, quantity: 1 }] },
+      context(),
+      (message) => warnings.push(message),
+    );
+    expect(sent().custom_data).toEqual({
+      contents: [{ id: ' SKU-1 ', quantity: 1, item_price: 10 }],
+    });
+    expect(warnings).toEqual([]);
+  });
+
   it('omits custom_data rather than sending an empty one', async () => {
     await meta(credentials).track('Purchase', {}, context(), noop);
 

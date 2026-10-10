@@ -69,17 +69,24 @@ The rest of the list above is still tested per provider, against GA4. Those test
 suite when a second provider makes the duplication real, which is the same condition
 `.claude/rules/testing.md` sets for any shared helper.
 
-Meta is that second provider, and it has not arrived yet. The suite was built early because the
-consent work needed the invariants written down; the list above is what it grows into, not what it
-is.
+The suite was built early because the consent work needed the invariants written down.
+The list above describes its intended coverage, not a claim that it covers every item.
 
-The development-time warning owed for `default: 'ignore'`, promised in ADR-0003 and due with
-LinkedIn, is one of these behaviours and belongs in this suite.
+**Status update, 2026-10-10:** Meta, LinkedIn and PostHog now exist on both
+surfaces in this branch. Provider-specific tests still cover the invariants not
+asserted by the shared suite; adding a provider does not itself complete that
+suite's coverage.
+
+The warning owed for `default: 'ignore'`, promised in ADR-0003 and delivered with
+LinkedIn, is covered by this suite on both surfaces: an absent mapping reports
+through `onError`, while an explicit `null` remains silent. ADR-0003 records why
+the host controls whether that diagnostic channel is attached in development
+or production.
 
 ## What ships is data, not prose repeated six times
 
-"GA4 ships today, Meta, LinkedIn, PostHog and X are next" is currently written by hand in six
-places: this repository's README, the package README, the package description, the documentation
+At the time of this decision, "GA4 ships today, Meta, LinkedIn, PostHog and X are next"
+was written by hand in six places: this repository's README, the package README, the package description, the documentation
 landing page, the home page and the machine-readable index.
 
 This has already failed. The release of 0.1.0 corrected the claim everywhere except the
@@ -108,6 +115,16 @@ a duplicate page view on every load, and a headless browser silently discarded a
 left the built library, and the vendor's own report showing the event. Not a status code, and not
 a passing test suite. `AGENTS.md` describes how to produce this; what changes here is that it
 gates the merge rather than advising the author.
+
+The evidence must also state what the vendor report can confirm. In the
+LinkedIn verification recorded in the provider PR description, dedicated
+Purchase conversion rules became Active and their received-signal timestamps
+followed the captured built-adapter sends. The report and screenshots confirm
+receipt at the conversion-activity level. They do not expose individual event
+IDs, counts, received values, identity matching or paid-ad attribution; none of
+those may be claimed as verified. The outgoing captures and vendor report are
+both still required. Verification captures, screenshots and review reports
+belong in the PR description or attachments, never in Git history.
 
 Two consequences we accept:
 

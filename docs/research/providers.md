@@ -171,17 +171,21 @@ library exposes none of them.
 
 **There are no event names.** Every conversion is a rule created in Campaign Manager, which
 yields a numeric `conversion_id`. The call is
-`lintrk('track', { conversion_id, conversion_value?, currency?, event_id? })`, and with no
+`lintrk('track', { conversion_id, conversion_value?, conversion_currency?, event_id? })`, and with no
 resolved `conversion_id` there is no call at all. `[C]`
 
 Conversions API: `POST https://api.linkedin.com/rest/conversionEvents`, with the rule URN
 (`urn:lla:llaPartnerConversion:<id>`), `conversionHappenedAt` in epoch milliseconds (at most
 90 days old), `conversionValue`, and a `user` object holding `userIds[]` of `idType`/`idValue`
 pairs — `SHA256_EMAIL` and `LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID` among the accepted types.
-At least one identifier is required. `[C]`
+`userIds` is required, including `[]` when full name or an external ID supplies
+identity. Email removes all whitespace before lowercase and SHA-256; `li_fat_id`
+is URI-decoded and forwarded, while `context.user.userId` becomes `externalIds`.
+The current schema also accepts IPv4 as `PLAINTEXT_IP_ADDRESS`. `[C]`
 
 Deduplication uses the same semantic ID under **different field names per surface**:
-`event_id` in the browser tag, `eventId` in the Conversions API. `[I]`
+`event_id` in the browser tag, `eventId` in the Conversions API. Separate browser
+and server conversion rules belong to the same account. `[C]`
 
 Consent: no command exists. Control is binary and is script loading — the walkerOS reference
 integration handles it by deferring injection until consent arrives. `[I]`

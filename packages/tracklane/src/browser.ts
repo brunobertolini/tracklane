@@ -1,6 +1,7 @@
 import { assertUniqueProviders, makeReporter, messageOf, resolveEvent } from './dispatch.js';
 
 export { type Ga4BrowserConfig, ga4 } from './providers/ga4.browser.js';
+export { type LinkedinBrowserConfig, linkedin } from './providers/linkedin.browser.js';
 export { type MetaBrowserConfig, meta } from './providers/meta.browser.js';
 export { type PosthogBrowserConfig, posthog } from './providers/posthog.browser.js';
 
@@ -52,8 +53,18 @@ export interface BrowserProvider<Target = string> {
    * installs again, including providers that were already there.
    */
   install?(): void | Promise<void>;
-  /** Sends one event to this vendor. Throwing here reaches `onError`, not the caller. */
-  track(name: Target, data: EventData, options: TrackOptions): void;
+  /**
+   * Sends one event to this vendor. Throwing here reaches `onError`, not the caller.
+   * The optional report callback emits a payload-free warning; it is not proof
+   * of delivery or provider-side processing. Older three-argument providers
+   * and direct calls remain supported.
+   */
+  track(
+    name: Target,
+    data: EventData,
+    options: TrackOptions,
+    report?: (message: string) => void,
+  ): void;
   /** Absent where the vendor keeps no user of its own. */
   identify?(user: UserData, traits?: Record<string, unknown>): void;
   /** Absent where the vendor documents no consent command. */
@@ -67,6 +78,8 @@ export interface BrowserTrackingOptions {
   /**
    * The one diagnostic channel. Without it the library is silent, exactly as
    * a hand-written vendor call is.
+   * Unmapped events on an `ignore` provider report warnings; explicit `null`
+   * exclusions stay silent. Attach a reporter in development to catch omissions.
    */
   onError?: (error: TrackingError) => void;
 }
@@ -129,11 +142,15 @@ export function createTracking(options: BrowserTrackingOptions): BrowserTracking
   return {
     track(name, data = {}, trackOptions = {}) {
       for (const provider of providers) {
-        const target = resolveEvent(provider, name);
+        const target = resolveEvent(provider, name, (message) => {
+          report({ provider: provider.name, event: name, severity: 'warning', message });
+        });
         if (target === undefined) continue;
 
         try {
-          provider.track(target, data, trackOptions);
+          provider.track(target, data, trackOptions, (message) => {
+            report({ provider: provider.name, event: name, severity: 'warning', message });
+          });
         } catch (cause) {
           fail(provider.name, name, cause);
         }

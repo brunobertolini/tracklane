@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createTracking } from '../browser.js';
 import { conformsAsBrowserProvider } from '../conformance.js';
+import type { EventItem, TrackingError } from '../index.js';
 import { meta } from './meta.browser.js';
 
 let calls: unknown[][];
@@ -87,6 +89,77 @@ describe('meta browser', () => {
     // `item_name` has no home inside `contents`. Forwarding it would look
     // mapped and arrive nowhere.
     expect(calls[0]?.[2]).toEqual({ contents: [{ id: 'SKU-1', quantity: 2, item_price: 25 }] });
+  });
+
+  it.each([undefined, '', '   '])('omits all contents when an item has no usable id (%s)', (id) => {
+    const errors: TrackingError[] = [];
+    const item: EventItem = { item_name: 'PRIVATE-LABEL', price: 5, quantity: 1 };
+    if (id !== undefined) item.item_id = id;
+    const data = {
+      value: 15,
+      currency: 'BRL',
+      transaction_id: 'T-1',
+      items: [{ item_id: 'SKU-1', price: 10, quantity: 1 }, item],
+    };
+    const before = JSON.stringify(data);
+    createTracking({ providers: [meta()], onError: (error) => errors.push(error) }).track(
+      'purchase',
+      data,
+      { dedupId: 'event-1' },
+    );
+    expect(calls).toEqual([
+      [
+        'track',
+        'Purchase',
+        { value: 15, currency: 'BRL', transaction_id: 'T-1' },
+        { eventID: 'event-1' },
+      ],
+    ]);
+    expect(errors).toEqual([
+      {
+        provider: 'meta',
+        event: 'purchase',
+        severity: 'warning',
+        message: 'contents omitted: every item needs a nonempty item_id; totals were preserved',
+      },
+    ]);
+    expect(JSON.stringify(errors)).not.toContain('PRIVATE-LABEL');
+    expect(JSON.stringify(data)).toBe(before);
+  });
+
+  it('omits colliding contents when canonical items cannot be represented', () => {
+    const warnings: string[] = [];
+    const data = {
+      value: 15,
+      currency: 'BRL',
+      items: [{ item_id: 'SKU-1' }, { item_name: 'Name only' }],
+      contents: [{ id: 'partial-order' }],
+    };
+    const before = JSON.stringify(data);
+    meta().track('Purchase', data, {}, (message) => warnings.push(message));
+    expect(calls[0]?.[2]).toEqual({ value: 15, currency: 'BRL' });
+    expect(warnings).toEqual([
+      'contents omitted: every item needs a nonempty item_id; totals were preserved',
+    ]);
+    expect(JSON.stringify(data)).toBe(before);
+  });
+
+  it('passes through host contents when no canonical items are supplied', () => {
+    const warnings: string[] = [];
+    const data = { contents: [{ id: 'host-id' }] };
+    meta().track('Purchase', data, {}, (message) => warnings.push(message));
+    expect(calls[0]?.[2]).toEqual(data);
+    expect(warnings).toEqual([]);
+  });
+
+  it('preserves supplied ids and emits no omission warning for representable items', () => {
+    const errors: TrackingError[] = [];
+    createTracking({ providers: [meta()], onError: (error) => errors.push(error) }).track(
+      'purchase',
+      { items: [{ item_id: ' SKU-1 ', price: 10, quantity: 1 }] },
+    );
+    expect(calls[0]?.[2]).toEqual({ contents: [{ id: ' SKU-1 ', quantity: 1, item_price: 10 }] });
+    expect(errors).toEqual([]);
   });
 
   it('passes through what the host named itself', () => {

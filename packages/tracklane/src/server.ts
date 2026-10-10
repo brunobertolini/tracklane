@@ -6,6 +6,11 @@ export {
   ga4,
 } from './providers/ga4.server.js';
 export {
+  type LinkedinServerConfig,
+  type LinkedinServerCredentials,
+  linkedin,
+} from './providers/linkedin.server.js';
+export {
   type MetaServerConfig,
   type MetaServerCredentials,
   meta,
@@ -121,6 +126,8 @@ export interface ServerTrackingOptions {
   /**
    * The one diagnostic channel. Without it the library is silent, exactly as
    * a hand-written vendor call is.
+   * Unmapped events on an `ignore` provider report warnings; explicit `null`
+   * exclusions stay silent. Attach a reporter in development to catch omissions.
    */
   onError?: (error: TrackingError) => void;
 }
@@ -201,7 +208,9 @@ export function createTracking(options: ServerTrackingOptions): ServerTracking {
       };
 
       const sends = providers.map(async (provider) => {
-        const target = resolveEvent(provider, name);
+        const target = resolveEvent(provider, name, (message) => {
+          report({ provider: provider.name, event: name, severity: 'warning', message });
+        });
         if (target === undefined) return;
 
         try {

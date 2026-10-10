@@ -52,9 +52,10 @@ slot is `distinct_id`; there is no separate field for any of the others the way 
 has one each, so inventing a destination for them would look mapped and arrive nowhere.
 
 `dedupId` maps nowhere: the Capture API documents no field for matching a browser event to a
-server event of the same action. PostHog does carry an internal per-event `uuid` used to survive
-its own retries, and its documentation discourages relying on it, so it is not that field wearing
-another name. Use `transaction_id` (business data) to control duplicate purchases.
+server event of the same action. The server adapter forwards a UUID-shaped `dedupId`
+as `uuid` for retried server events, with a pinned timestamp and identity; that
+does not provide a shared browser/server key. See the server section below.
+Use `transaction_id` (business data) when reconciling duplicate purchases.
 
 ### Consent is one switch, not four
 

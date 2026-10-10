@@ -1,0 +1,117 @@
+---
+title: LinkedIn
+description: Conversion maps, identity and value translation for the Insight Tag and Conversions API
+---
+
+LinkedIn identifies conversions by account-specific rules, rather than event names.
+Create a separate rule for each surface in Campaign Manager, following
+[LinkedIn's setup documentation](https://www.linkedin.com/help/lms/answer/a1711116).
+The required `events` map binds your canonical names to those rule IDs as strings.
+
+## Browser
+
+Install the [Insight Tag](https://www.linkedin.com/help/lms/answer/a418880) on the
+page first. The adapter calls the existing `window.lintrk`; it installs no tag.
+A missing snippet reports an error through `onError`. Bind browser events to
+an **event-specific** Insight Tag conversion. A page-load rule with empty URL
+rules is still a page-load rule; it does not match this adapter's `lintrk` call.
+
+```ts
+import { createTracking, linkedin } from 'tracklane/browser';
+
+const { track } = createTracking({
+  providers: [linkedin({ events: { purchase: '12345', internal_event: null } })],
+  onError: (error) => report(error),
+});
+
+track('purchase', { value: 15, currency: 'BRL' }, { dedupId: 'order-1' });
+```
+
+The adapter converts the mapped ID to the numeric `conversion_id` that the tag
+expects. `value` becomes `conversion_value`, `currency` becomes
+`conversion_currency`, and `dedupId` becomes `event_id`. The adapter passes zero
+as `conversion_value: 0`. In the live test, LinkedIn's hosted SDK omitted the
+wire `val` parameter for zero. The report did not expose received monetary
+values, so the resulting recorded value was not verified.
+The Insight Tag handles its own visitor identity. There is no `identify` or
+`consent` command on this provider. Items, `transaction_id` and custom event
+properties have no translation. The browser forwards value and currency
+independently, without the server's missing-currency warning; the hosted SDK
+behavior for a value without currency was not tested live.
+
+<AutoTypeTable path="../../packages/tracklane/src/providers/linkedin.browser.ts" name="LinkedinBrowserConfig" />
+
+## Server
+
+```ts
+import { createTracking, linkedin } from 'tracklane/server';
+
+const { track } = createTracking({
+  providers: [linkedin({ accessToken }, { events: { purchase: '67890' } })],
+  onError: (error) => report(error),
+});
+
+await track('purchase', { value: 15, currency: 'BRL' }, {
+  user: { userId: order.userId, email: order.email },
+  cookies: request.headers.get('cookie'),
+  timestamp: order.paidAt,
+  dedupId: order.id,
+});
+```
+
+The target becomes `urn:lla:llaPartnerConversion:<id>`. The timestamp remains
+epoch milliseconds. Value and currency together become `conversionValue`,
+with the amount represented as a decimal string. Without currency the adapter
+omits that object and, after HTTP acceptance, reports a warning. The adapter
+does not choose a fallback value or guess a currency; the report did not expose
+the received monetary value for verification.
+
+Identity follows the [vendor's schema](https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads-reporting/conversions-api-schema?view=li-lms-2026-09):
+
+| Context | LinkedIn field |
+| --- | --- |
+| `user.email` | SHA-256 of the lowercased address with whitespace removed, in `userIds` |
+| `cookies.li_fat_id` | URI-decoded `LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID`, without hashing |
+| `ip` | `PLAINTEXT_IP_ADDRESS`, for IPv4 only |
+| `user.firstName` and `user.lastName` | Both names together in `userInfo` |
+| `user.userId` | The single raw value in `externalIds` |
+
+`userIds` is always present, including an empty array when names or an external
+ID supply identity. External-ID matching relies on the association LinkedIn
+already holds; this library cannot establish or verify that association.
+When none of the supported identity fields can be supplied, the adapter reports
+an error and makes no request. It does not invent an identifier.
+
+Items, `transaction_id`, custom event properties, phone, traits, source URL,
+user agent and consent have no translation on this adapter. The server API
+version defaults to `202609` and can be set on the factory.
+
+<AutoTypeTable path="../../packages/tracklane/src/providers/linkedin.server.ts" name="LinkedinServerCredentials" />
+
+<AutoTypeTable path="../../packages/tracklane/src/providers/linkedin.server.ts" name="LinkedinServerConfig" />
+
+## Mapping and deduplication
+
+Each unmapped call sends nothing and reports a warning through `onError`, in any
+environment where the host attaches that reporter. An explicit `null` sends
+nothing silently. Use `null` for intentional exclusions. Without `onError`, the
+library remains silent and never writes to the console.
+
+Browser and server rules have **different conversion IDs**, on the same ad
+account. Forward the same host-owned `dedupId` on both surfaces: the browser
+uses `event_id`, the server uses `eventId`. See
+[LinkedIn's deduplication documentation](https://learn.microsoft.com/en-us/linkedin/marketing/conversions/deduplication?view=li-lms-2026-09).
+The library forwards the ID; it does not prove that LinkedIn deduplicated it.
+
+## Live verification scope
+
+Built browser and server adapters sent synthetic purchases to dedicated rules.
+Campaign Manager showed both rules Active, and their received-signal timestamps
+matched the send intervals. This confirms conversion activity, without proving
+individual event counts, recorded values, identity matching or ad attribution.
+
+The corrected browser rule first stayed Unverified on a local test hostname; a
+later temporary HTTPS test host produced a callback. Host and time both changed,
+so the cause was not isolated. That test host is not a Tracklane dependency.
+See [LinkedIn's status guidance](https://www.linkedin.com/help/lms/answer/a489395)
+when checking receipt in your own account.

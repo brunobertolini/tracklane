@@ -1,7 +1,11 @@
 import { expect, it } from 'vitest';
-import type { BrowserProvider } from './browser.js';
+import { type BrowserProvider, createTracking as createBrowserTracking } from './browser.js';
 import { isVendorResponseError } from './errors.js';
-import type { ResolvedContext, ServerProvider } from './server.js';
+import {
+  createTracking as createServerTracking,
+  type ResolvedContext,
+  type ServerProvider,
+} from './server.js';
 import type { EventData, ProviderDefault } from './vocabulary.js';
 
 /**
@@ -57,6 +61,7 @@ function assertIdentity(provider: { name: string; default: ProviderDefault }): v
  * @param captured - Everything the provider handed the vendor since the last
  * reset, in order.
  * @param reset - Clears what `captured` returns.
+ * @param target - An already-resolved vendor target. Defaults to `purchase`.
  *
  * @example
  * ```ts
@@ -73,21 +78,39 @@ export function conformsAsBrowserProvider(options: {
   create: () => BrowserProvider;
   captured: () => unknown[];
   reset: () => void;
+  /** Already-resolved vendor target; conversion-ID providers use their configured ID. */
+  target?: string;
 }): void {
   const { create, captured, reset } = options;
+  const target = options.target ?? 'purchase';
 
   assertIdentity(create());
+
+  it('reports absent mappings on ignore providers and keeps explicit exclusions silent', () => {
+    const provider = create();
+    if (provider.default !== 'ignore') return;
+    reset();
+    const errors: { severity: string; event: string }[] = [];
+    const tracking = createBrowserTracking({
+      providers: [{ ...provider, events: { explicit: null } }],
+      onError: (error) => errors.push(error),
+    });
+    tracking.track('missing');
+    tracking.track('explicit');
+    expect(errors).toMatchObject([{ severity: 'warning', event: 'missing' }]);
+    expect(captured()).toEqual([]);
+  });
 
   it('sends the same thing twice for the same event', () => {
     // The library never invents an identifier, and this is how that rule is
     // caught rather than trusted: a generated id, a random value or a clock
     // read makes two identical calls differ.
     reset();
-    create().track('purchase', STABLE_DATA, {});
+    create().track(target, STABLE_DATA, {});
     const first = JSON.stringify(captured());
 
     reset();
-    create().track('purchase', STABLE_DATA, {});
+    create().track(target, STABLE_DATA, {});
     const second = JSON.stringify(captured());
 
     expect(second).toBe(first);
@@ -95,11 +118,11 @@ export function conformsAsBrowserProvider(options: {
 
   it('forwards the deduplication id only when it was given one', () => {
     reset();
-    create().track('purchase', STABLE_DATA, {});
+    create().track(target, STABLE_DATA, {});
     const without = JSON.stringify(captured());
 
     reset();
-    create().track('purchase', STABLE_DATA, { dedupId: 'DEDUP-XYZ' });
+    create().track(target, STABLE_DATA, { dedupId: 'DEDUP-XYZ' });
     const with_ = JSON.stringify(captured());
 
     // Either the vendor has the concept, and the value appears where it did
@@ -133,6 +156,7 @@ export function conformsAsBrowserProvider(options: {
  * @param fail - Makes the next send fail at the transport, so the suite can
  * check that the provider is loud about it.
  * @param context - A resolved context with a fixed timestamp.
+ * @param target - An already-resolved vendor target. Defaults to `purchase`.
  *
  * @example
  * ```ts
@@ -153,32 +177,50 @@ export function conformsAsServerProvider(options: {
   reset: () => void;
   fail: () => void;
   context: () => ResolvedContext;
+  /** Already-resolved vendor target; conversion-ID providers use their configured ID. */
+  target?: string;
 }): void {
   const { create, captured, reset, fail, context } = options;
+  const target = options.target ?? 'purchase';
   const noop = (): void => {};
 
   assertIdentity(create());
+
+  it('reports absent mappings on ignore providers and keeps explicit exclusions silent', async () => {
+    const provider = create();
+    if (provider.default !== 'ignore') return;
+    reset();
+    const errors: { severity: string; event: string }[] = [];
+    const tracking = createServerTracking({
+      providers: [{ ...provider, events: { explicit: null } }],
+      onError: (error) => errors.push(error),
+    });
+    await tracking.track('missing', {}, context());
+    await tracking.track('explicit', {}, context());
+    expect(errors).toMatchObject([{ severity: 'warning', event: 'missing' }]);
+    expect(captured()).toEqual([]);
+  });
 
   it('sends the same thing twice for the same event', async () => {
     // The context carries a fixed timestamp, so any difference between these
     // two is something the provider produced on its own.
     reset();
-    await create().track('purchase', STABLE_DATA, context(), noop);
+    await create().track(target, STABLE_DATA, context(), noop);
     const first = JSON.stringify(captured());
 
     reset();
-    await create().track('purchase', STABLE_DATA, context(), noop);
+    await create().track(target, STABLE_DATA, context(), noop);
 
     expect(JSON.stringify(captured())).toBe(first);
   });
 
   it('forwards the deduplication id only when it was given one', async () => {
     reset();
-    await create().track('purchase', STABLE_DATA, context(), noop);
+    await create().track(target, STABLE_DATA, context(), noop);
     const without = JSON.stringify(captured());
 
     reset();
-    await create().track('purchase', STABLE_DATA, { ...context(), dedupId: 'DEDUP-XYZ' }, noop);
+    await create().track(target, STABLE_DATA, { ...context(), dedupId: 'DEDUP-XYZ' }, noop);
     const with_ = JSON.stringify(captured());
 
     if (with_ !== without) expect(with_).toContain('DEDUP-XYZ');
@@ -198,7 +240,7 @@ export function conformsAsServerProvider(options: {
 
     let caught: unknown;
     try {
-      await create().track('purchase', STABLE_DATA, context(), noop);
+      await create().track(target, STABLE_DATA, context(), noop);
     } catch (error) {
       caught = error;
     }

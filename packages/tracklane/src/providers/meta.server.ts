@@ -133,7 +133,12 @@ const normaliseName = (value: string): string =>
  * than forwarded, because a key Meta does not read inside `contents` looks
  * mapped and arrives nowhere.
  */
-function contents(items: readonly EventItem[]): Record<string, unknown>[] {
+function contents(items: readonly EventItem[]): Record<string, unknown>[] | undefined {
+  // All or none: a partial list would silently describe only part of the order.
+  // Check whitespace without rewriting the identifier the host supplied.
+  if (items.some((item) => typeof item.item_id !== 'string' || !item.item_id.trim()))
+    return undefined;
+
   return items.map((item) => {
     const content: Record<string, unknown> = {};
 
@@ -159,7 +164,11 @@ function customData(data: EventData): Record<string, unknown> {
   const custom: Record<string, unknown> = { ...rest };
 
   if (transactionId !== undefined) custom.order_id = transactionId;
-  if (items) custom.contents = contents(items);
+  if (items) {
+    const mapped = contents(items);
+    if (mapped !== undefined) custom.contents = mapped;
+    else delete custom.contents;
+  }
 
   return custom;
 }
@@ -220,6 +229,11 @@ async function userData(context: ResolvedContext): Promise<Record<string, string
 
 /**
  * Meta's Conversions API.
+ *
+ * If any item lacks a nonempty `item_id`, the complete `contents` list is
+ * omitted while totals and order metadata remain unchanged. This avoids
+ * presenting a partial order or inventing product identifiers. The error
+ * channel receives one payload-free warning after HTTP acceptance.
  *
  * @param credentials - The pixel id and an access token.
  * @param config - Event overrides, the default action source, and Meta's own
@@ -340,6 +354,10 @@ export function meta(
           status: response.status,
           body,
         });
+      }
+
+      if (data.items && custom.contents === undefined) {
+        report('contents omitted: every item needs a nonempty item_id; totals were preserved');
       }
 
       // A body that will not parse must not turn a delivered conversion into

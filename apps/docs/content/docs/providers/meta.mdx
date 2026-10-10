@@ -80,6 +80,17 @@ Only Meta's documented `contents` keys survive the translation. A GA4 item's `it
 `item_brand` is dropped rather than forwarded, because a key Meta does not read inside `contents`
 looks mapped and arrives nowhere.
 
+**Items are translated all or none, on both surfaces.** If any item's `item_id` is missing,
+empty, or whitespace-only, the adapter omits the complete `contents` list. It still sends the
+event, totals, currency, and order metadata. It never substitutes a product name as an ID or
+filters the list into a partial order. Valid IDs are forwarded unchanged. After the browser
+command returns or the server receives HTTP acceptance, `onError` receives one payload-free
+`warning` about this omission; it does not prove processing in Meta's reports.
+
+This omission policy has local regression coverage and was verified with both built
+adapters against a test pixel on 2026-10-09, including the outgoing requests and processed
+browser and server events in Events Manager.
+
 ### Consent, collapsed
 
 Meta has one switch where this library carries Google's four signals, so the four collapse into it:
@@ -264,13 +275,21 @@ canonical names for them would make this library the author of a vocabulary it d
 borrows. Map your own event name instead:
 
 ```ts
-meta('1234567890', { events: { start_trial: 'StartTrial', contact: 'Contact' } });
+// Browser
+meta({ events: { start_trial: 'StartTrial', contact: 'Contact' } });
+
+// Server
+meta({ pixelId, accessToken }, { events: { start_trial: 'StartTrial', contact: 'Contact' } });
 ```
 
 The same map keeps an event out of Meta entirely:
 
 ```ts
-meta('1234567890', { events: { internal_admin_action: null } });
+// Browser
+meta({ events: { internal_admin_action: null } });
+
+// Server
+meta({ pixelId, accessToken }, { events: { internal_admin_action: null } });
 ```
 
 Your entries merge over the built-in ones, on both halves. Remember to configure both, or

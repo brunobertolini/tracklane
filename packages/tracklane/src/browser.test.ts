@@ -30,7 +30,12 @@ describe('createTracking (browser)', () => {
 
     track('purchase', { value: 10 }, { dedupId: 'T-1' });
 
-    expect(track_).toHaveBeenCalledWith('purchase', { value: 10 }, { dedupId: 'T-1' });
+    expect(track_).toHaveBeenCalledWith(
+      'purchase',
+      { value: 10 },
+      { dedupId: 'T-1' },
+      expect.any(Function),
+    );
   });
 
   it('never invents a dedup id', () => {
@@ -226,4 +231,32 @@ describe('event resolution', () => {
 
     expect(track_.mock.calls[0]?.[0]).toBe('constructor');
   });
+});
+
+it('isolates a throwing warning handler and continues to the next provider', () => {
+  const sent: string[] = [];
+  const tracking = createTracking({
+    providers: [
+      {
+        name: 'warning',
+        default: 'passthrough',
+        track(_name, _data, _options, report) {
+          sent.push('first');
+          report?.('payload omitted');
+        },
+      },
+      {
+        name: 'next',
+        default: 'passthrough',
+        track() {
+          sent.push('second');
+        },
+      },
+    ],
+    onError() {
+      throw new Error('host callback failed');
+    },
+  });
+  expect(() => tracking.track('purchase')).not.toThrow();
+  expect(sent).toEqual(['first', 'second']);
 });

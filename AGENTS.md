@@ -54,8 +54,10 @@ non-goals) and `0003-public-surface.md` (the API it produced). Vendor facts:
 
 ## Where this stands
 
-**Done:** the core on both halves, and GA4 on both halves — verified end to end
-against a real property, with events confirmed visible in its report. Plus
+**Done in this branch:** the core and GA4, Meta, LinkedIn and PostHog on both
+halves, with live evidence from dedicated test resources. LinkedIn confirms
+receipt at the conversion-activity level, not individual event counts or values;
+see the provider PR description for evidence and verification scope. Plus
 `@tracklane/consent` and `@tracklane/consent-rules`, which hold the visitor's
 answer and survey what a jurisdiction requires; the documentation site is their
 first host.
@@ -64,15 +66,13 @@ first host.
 An absent changeset is not the guard people assume: `changeset publish` ships
 any workspace package whose version is not already on npm.
 
-**Next:** Meta, then LinkedIn, then PostHog, then X. One vendor at a time, both
-halves before moving on: the provider contract has two halves and proving one
-says nothing about the other.
+**Next:** X. One vendor at a time, both halves before moving on: the provider
+contract has two halves and proving one says nothing about the other.
 
-LinkedIn will stress the contract hardest — no event names, no consent API, its
-own identifier types, different field names per surface. **One debt is owed to
-that commit:** LinkedIn is the first provider with `default: 'ignore'`, so an
-unmapped event silently sends nothing. ADR-0003 promises a development-time
-warning for it, and it ships with LinkedIn rather than after.
+LinkedIn uses account-specific conversion IDs and `default: 'ignore'`. Each
+unmapped call sends nothing and reports a warning when `onError` is attached,
+in any environment; an explicit `null` stays silent. The host controls where
+it logs diagnostics. ADR-0003 records this behavior, covered on both surfaces.
 
 ## Verifying a provider — not optional
 
@@ -100,6 +100,10 @@ So, whatever tooling you have:
 
 Credentials for a test property are read by variable name from the environment.
 Never open an env file to get them.
+
+**Verification artifacts belong in the PR description or attachments, never in
+Git history.** Keep local captures, screenshots and review reports outside the
+repository or in the ignored `docs/reviews/` directory.
 
 **This gates the merge, it does not advise the author.** A provider pull request
 carries the captured request and a screenshot of the vendor's own report, or it

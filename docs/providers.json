@@ -16,7 +16,7 @@
     {
       "id": "linkedin",
       "label": "LinkedIn",
-      "shipped": false,
+      "shipped": true,
       "serverApi": "Conversions API"
     },
     {
