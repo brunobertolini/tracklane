@@ -227,3 +227,80 @@ describe('event resolution', () => {
     expect(track_.mock.calls[0]?.[0]).toBe('constructor');
   });
 });
+
+// The diagnostic ADR-0003 owes to `default: 'ignore'`. It lives here rather
+// than in the conformance suite because the suite drives a provider's `track`
+// directly and never resolves an event, so the silence it is about cannot
+// happen there.
+describe('the warning owed to an unmapped event', () => {
+  it('says which vendor swallowed it, and what to do', () => {
+    const onError = vi.fn();
+    const { track } = createTracking({
+      providers: [provider({ name: 'linkedin', default: 'ignore' })],
+      onError,
+    });
+
+    track('purchase');
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]?.[0]).toMatchObject({
+      provider: 'linkedin',
+      event: 'purchase',
+      severity: 'warning',
+    });
+    // Naming the fix, because the id is minted in the vendor's dashboard and
+    // cannot be guessed from here. A warning that only says "unmapped" leaves
+    // the reader exactly where they were.
+    expect(onError.mock.calls[0]?.[0].message).toContain('events');
+  });
+
+  it('says it once, however often the event fires', () => {
+    const onError = vi.fn();
+    const { track } = createTracking({
+      providers: [provider({ default: 'ignore' })],
+      onError,
+    });
+
+    track('view_item');
+    track('view_item');
+    track('view_item');
+
+    // A page view on every navigation would drown the channel it is trying to
+    // be heard on.
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays quiet about a null binding, which is deliberate silence', () => {
+    // The host said "never send this event here". Warning about a decision
+    // somebody made on purpose is how people learn to ignore the warning.
+    const onError = vi.fn();
+    const { track } = createTracking({
+      providers: [provider({ default: 'ignore', events: { internal_ping: null } })],
+      onError,
+    });
+
+    track('internal_ping');
+
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('stays quiet for a vendor that passes unmapped events through', () => {
+    const onError = vi.fn();
+    const { track } = createTracking({ providers: [provider()], onError });
+
+    track('purchase');
+
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('warns again for a rebuilt tracking, which is a fresh question', () => {
+    // `@tracklane/consent` rebuilds on every consent answer. A module-level
+    // set would answer the first host and stay silent for every one after it.
+    const onError = vi.fn();
+
+    createTracking({ providers: [provider({ default: 'ignore' })], onError }).track('purchase');
+    createTracking({ providers: [provider({ default: 'ignore' })], onError }).track('purchase');
+
+    expect(onError).toHaveBeenCalledTimes(2);
+  });
+});

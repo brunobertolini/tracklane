@@ -1,4 +1,10 @@
-import { assertUniqueProviders, makeReporter, messageOf, resolveEvent } from './dispatch.js';
+import {
+  assertUniqueProviders,
+  makeReporter,
+  makeUnmappedReporter,
+  messageOf,
+  resolveEvent,
+} from './dispatch.js';
 
 export {
   type Ga4ServerConfig,
@@ -190,6 +196,7 @@ export function createTracking(options: ServerTrackingOptions): ServerTracking {
   assertUniqueProviders(providers);
 
   const report = makeReporter(options.onError);
+  const reportUnmapped = makeUnmappedReporter(report);
 
   return {
     async track(name, data = {}, context = {}) {
@@ -201,7 +208,9 @@ export function createTracking(options: ServerTrackingOptions): ServerTracking {
       };
 
       const sends = providers.map(async (provider) => {
-        const target = resolveEvent(provider, name);
+        const target = resolveEvent(provider, name, () => {
+          reportUnmapped(provider.name, name);
+        });
         if (target === undefined) return;
 
         try {

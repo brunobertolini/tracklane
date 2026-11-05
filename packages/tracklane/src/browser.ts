@@ -1,4 +1,10 @@
-import { assertUniqueProviders, makeReporter, messageOf, resolveEvent } from './dispatch.js';
+import {
+  assertUniqueProviders,
+  makeReporter,
+  makeUnmappedReporter,
+  messageOf,
+  resolveEvent,
+} from './dispatch.js';
 
 export { type Ga4BrowserConfig, ga4 } from './providers/ga4.browser.js';
 export { type MetaBrowserConfig, meta } from './providers/meta.browser.js';
@@ -108,6 +114,7 @@ export function createTracking(options: BrowserTrackingOptions): BrowserTracking
   assertUniqueProviders(providers);
 
   const report = makeReporter(options.onError);
+  const reportUnmapped = makeUnmappedReporter(report);
 
   const fail = (provider: string, event: string, cause: unknown): void => {
     report({ provider, event, severity: 'error', message: messageOf(cause), cause });
@@ -129,7 +136,9 @@ export function createTracking(options: BrowserTrackingOptions): BrowserTracking
   return {
     track(name, data = {}, trackOptions = {}) {
       for (const provider of providers) {
-        const target = resolveEvent(provider, name);
+        const target = resolveEvent(provider, name, () => {
+          reportUnmapped(provider.name, name);
+        });
         if (target === undefined) continue;
 
         try {

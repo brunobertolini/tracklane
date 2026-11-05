@@ -194,3 +194,38 @@ describe('createTracking (server)', () => {
     expect(track_.mock.calls[1]?.[2].user).toBeUndefined();
   });
 });
+
+// Proved on this half as well as on the browser one. The contract has two
+// halves and proving one says nothing about the other, which is the rule this
+// project keeps for providers and which applies no less to the dispatcher.
+describe('the warning owed to an unmapped event', () => {
+  it('says which vendor swallowed it, and says it once', async () => {
+    const onError = vi.fn();
+    const { track } = createTracking({
+      providers: [provider({ name: 'linkedin', default: 'ignore' })],
+      onError,
+    });
+
+    await track('purchase');
+    await track('purchase');
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]?.[0]).toMatchObject({
+      provider: 'linkedin',
+      event: 'purchase',
+      severity: 'warning',
+    });
+  });
+
+  it('stays quiet about a null binding, which is deliberate silence', async () => {
+    const onError = vi.fn();
+    const { track } = createTracking({
+      providers: [provider({ default: 'ignore', events: { internal_ping: null } })],
+      onError,
+    });
+
+    await track('internal_ping');
+
+    expect(onError).not.toHaveBeenCalled();
+  });
+});

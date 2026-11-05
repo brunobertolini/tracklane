@@ -38,6 +38,7 @@ export function assertUniqueProviders(providers: readonly { name: string }[]): v
 export function resolveEvent<Target>(
   provider: Resolvable<Target>,
   name: string,
+  onUnmapped?: () => void,
 ): Target | undefined {
   const events = provider.events;
   // `hasOwn`, not a plain lookup: every object inherits `constructor` and
@@ -47,9 +48,56 @@ export function resolveEvent<Target>(
 
   if (binding === null) return undefined;
   if (binding !== undefined) return binding;
-  if (provider.default === 'ignore') return undefined;
+
+  if (provider.default === 'ignore') {
+    // Only here. A `null` binding above is the host saying "never send this
+    // event here", which is deliberate silence and must stay quiet: warning
+    // about a decision somebody made on purpose is how people learn to ignore
+    // the warning.
+    onUnmapped?.();
+    return undefined;
+  }
 
   return name as Target;
+}
+
+/**
+ * The diagnostic owed to `default: 'ignore'`, promised by ADR-0003 and due
+ * with the first provider that uses it.
+ *
+ * A vendor whose events are minted in its own dashboard cannot be given a name
+ * to guess, so an unmapped event sends nothing at all. That is correct and it
+ * is invisible, which is the combination this library keeps finding at the
+ * bottom of a defect. The report says which vendor, which event, and what to
+ * do — the id cannot be guessed, so a message that does not name the dashboard
+ * is unactionable.
+ *
+ * Once per provider and event, because a `view_item` on every page would drown
+ * the channel it is trying to be heard on. The set belongs to one tracking
+ * instance rather than to the module: a host that rebuilds its tracking, as
+ * `@tracklane/consent` does on every consent answer, is asking a fresh
+ * question and deserves the answer again.
+ */
+export function makeUnmappedReporter(
+  report: (error: TrackingError) => void,
+): (provider: string, event: string) => void {
+  const seen = new Set<string>();
+
+  return (provider, event) => {
+    // A separator that cannot occur inside either half, written as an
+    // escape so this file stays plain ASCII: a literal NUL here makes git
+    // treat the source as binary, which costs every future reviewer a diff.
+    const key = `${provider}\0${event}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    report({
+      provider,
+      event,
+      severity: 'warning',
+      message: `"${event}" is not mapped for this vendor, which sends nothing rather than guessing a name, so this event went nowhere. Add it to this provider's \`events\`, spelled the way the vendor's own dashboard mints it.`,
+    });
+  };
 }
 
 /**
