@@ -1,5 +1,11 @@
 # @tracklane/consent
 
+## 1.2.0
+
+### Minor Changes
+
+- [#33](https://github.com/brunobertolini/tracklane/pull/33) [`c502488`](https://github.com/brunobertolini/tracklane/commit/c5024884c72e498930b059afaeec123a110b86f6) Thanks [@brunobertolini](https://github.com/brunobertolini)! - `consentedTracking` gains `reset()`. It resets every vendor that holds a user, then forwards the stored consent again, because PostHog's own reset forgets its opt-in.
+
 ## 1.1.0
 
 ### Minor Changes
