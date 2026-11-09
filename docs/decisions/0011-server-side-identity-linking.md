@@ -1,6 +1,6 @@
 # ADR-0011 — Linking two identities is one operation, not a side effect of every event
 
-- **Status:** accepted
+- **Status:** accepted; partly superseded by [ADR-0014](0014-identity-is-a-verb-on-both-halves.md)
 - **Date:** 2026-08-05
 - **Decision context:** The same adopter's follow-up named the one thing still keeping its PostHog
   server port alive, and it had not been in the first report: after capturing an event,
@@ -57,6 +57,11 @@ therefore wrote no cookie, so the merge has nothing to read. The mechanism only 
 case: the tag ran and `identify` did not.
 
 ## Why not `identify` on `ServerProvider` either
+
+**Superseded by [ADR-0014](0014-identity-is-a-verb-on-both-halves.md), 2026-11-09:** a second
+host reported the need, and the server gains an explicit `identify`. The merge happens only there,
+from an `anonymousId` the host names. The refusal of a merge inside `track`, or one read from a
+cookie, stands.
 
 The server half has no retained identity by design: identity travels per call, and `ServerTracking`
 exposes only `track`. Adding `identify` there to serve one vendor is the umbrella concept the
