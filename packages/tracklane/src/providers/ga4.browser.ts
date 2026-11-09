@@ -120,11 +120,38 @@ export function ga4(
       push('event', name, measurementId === undefined ? data : { ...data, send_to: measurementId });
     },
 
-    identify(user: UserData, traits?: Record<string, unknown>): void {
+    identify(
+      user: UserData,
+      traits?: Record<string, unknown>,
+      report?: (message: string) => void,
+    ): void {
       // GA4 documents no browser slot for email, phone or names. They map to
       // nothing, which is what "this concept does not exist here" means.
       if (user.userId !== undefined) push('set', { user_id: user.userId });
-      if (traits) push('set', 'user_properties', traits);
+      if (!traits) return;
+
+      // `null` is "no longer known". Whether gtag clears a user property
+      // given `null` is not verified here, so it is left out and reported
+      // rather than sent on a guess (ADR-0014).
+      const properties: Record<string, unknown> = {};
+      const unclearable: string[] = [];
+      for (const [name, value] of Object.entries(traits)) {
+        if (value === null) unclearable.push(name);
+        else properties[name] = value;
+      }
+
+      if (Object.keys(properties).length > 0) push('set', 'user_properties', properties);
+      if (unclearable.length > 0) {
+        report?.(
+          `user properties not cleared, because clearing one through gtag is not verified: ${unclearable.join(', ')}`,
+        );
+      }
+    },
+
+    reset(): void {
+      // Google's documented way to stop attributing hits to a user. User
+      // properties already set stay with the tag until the page reloads.
+      push('set', { user_id: null });
     },
 
     consent(command: 'default' | 'update', state: ConsentState): void {

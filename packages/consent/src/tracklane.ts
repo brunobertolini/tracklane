@@ -58,6 +58,12 @@ export interface ConsentedTracking<C extends string> {
   /** Forwards the user to the vendors that hold one, and to nobody else. */
   identify(user: UserData, traits?: Record<string, unknown>): void;
   /**
+   * Forgets the user in every vendor that holds one, at sign-out, then
+   * forwards the stored answer again: PostHog's own reset forgets its
+   * opt-in, and the visitor's answer has not changed.
+   */
+  reset(): void;
+  /**
    * The consent store: `state`, `answered`, `answer`, `subscribe`. This is
    * deliberately not `BrowserTracking.consent`: forwarding the declaration
    * to vendors is `consentedTracking`'s own job, done on every `answer`.
@@ -124,7 +130,7 @@ export function toConsentState(state: Readonly<Record<string, ConsentDecision>>)
  *
  * @param options - The categories, the vendors, how to collapse the answer
  * for vendors, and an optional error channel.
- * @returns `track` and `identify`, stable across rebuilds, and the `consent`
+ * @returns `track`, `identify` and `reset`, stable across rebuilds, and the `consent`
  * store for a banner to read and answer.
  *
  * @example
@@ -215,6 +221,10 @@ export function consentedTracking<C extends string>(
   return {
     track: (name, data, trackOptions) => instance.track(name, data, trackOptions),
     identify: (user, traits) => instance.identify(user, traits),
+    reset: () => {
+      instance.reset();
+      instance.consent('update', collapse(store.state));
+    },
     consent,
   };
 }

@@ -65,8 +65,18 @@ export interface BrowserProvider<Target = string> {
     options: TrackOptions,
     report?: (message: string) => void,
   ): void;
-  /** Absent where the vendor keeps no user of its own. */
-  identify?(user: UserData, traits?: Record<string, unknown>): void;
+  /**
+   * Absent where the vendor keeps no user of its own. A trait set to `null`
+   * means "no longer known". The optional report callback emits a
+   * payload-free warning, as on `track`.
+   */
+  identify?(
+    user: UserData,
+    traits?: Record<string, unknown>,
+    report?: (message: string) => void,
+  ): void;
+  /** Forgets the user, at sign-out. Absent where the vendor keeps no user of its own. */
+  reset?(): void;
   /** Absent where the vendor documents no consent command. */
   consent?(command: 'default' | 'update', state: ConsentState): void;
 }
@@ -91,6 +101,14 @@ export interface BrowserTracking {
   /** Forwards the user to the vendors that hold one, and to nobody else. */
   identify(user: UserData, traits?: Record<string, unknown>): void;
   /**
+   * Forgets the user in every vendor that holds one, at sign-out. Never throws.
+   *
+   * Vendors differ: GA4 clears `user_id` and keeps user properties until the
+   * page reloads; PostHog's own reset also forgets its opt-in, so call
+   * `consent('update', …)` again after it.
+   */
+  reset(): void;
+  /**
    * Forwards a consent declaration to every vendor that documents a command
    * for it. It never decides, stores or withholds anything.
    */
@@ -106,7 +124,7 @@ export interface BrowserTracking {
  * lost to loading and this library needs no queue of its own.
  *
  * @param options - The providers to send to, and an optional error channel.
- * @returns The `track`, `identify` and `consent` calls.
+ * @returns The `track`, `identify`, `reset` and `consent` calls.
  *
  * @example
  * ```ts
@@ -160,9 +178,21 @@ export function createTracking(options: BrowserTrackingOptions): BrowserTracking
     identify(user, traits) {
       for (const provider of providers) {
         try {
-          provider.identify?.(user, traits);
+          provider.identify?.(user, traits, (message) => {
+            report({ provider: provider.name, event: 'identify', severity: 'warning', message });
+          });
         } catch (cause) {
           fail(provider.name, 'identify', cause);
+        }
+      }
+    },
+
+    reset() {
+      for (const provider of providers) {
+        try {
+          provider.reset?.();
+        } catch (cause) {
+          fail(provider.name, 'reset', cause);
         }
       }
     },

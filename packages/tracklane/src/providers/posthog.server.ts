@@ -71,6 +71,45 @@ function anonymousId(cookies: Record<string, string>, apiKey: string): string | 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
+ * PostHog documents that it "shortens any `distinct_id` longer than 200
+ * characters" and ingests the event under the shortened id. Sent as given,
+ * because refusing would drop an event the vendor accepts; reported, because
+ * two ids sharing a prefix become one person and only the host can fix that.
+ */
+const MAX_DISTINCT_ID = 200;
+
+function checkLength(id: string, report: (message: string) => void): void {
+  if (id.length > MAX_DISTINCT_ID) {
+    report(
+      `distinct_id is longer than ${MAX_DISTINCT_ID} characters: PostHog truncates it, so two ids sharing that prefix become one person`,
+    );
+  }
+}
+
+/**
+ * Traits with a value go to `$set`; a trait set to `null` means "no longer
+ * known", which PostHog spells as a name in `$unset`.
+ */
+function personProperties(traits: Record<string, unknown> | undefined): {
+  $set?: Record<string, unknown>;
+  $unset?: string[];
+} {
+  if (!traits) return {};
+
+  const set: Record<string, unknown> = {};
+  const unset: string[] = [];
+  for (const [name, value] of Object.entries(traits)) {
+    if (value === null) unset.push(name);
+    else set[name] = value;
+  }
+
+  return {
+    ...(Object.keys(set).length > 0 ? { $set: set } : {}),
+    ...(unset.length > 0 ? { $unset: unset } : {}),
+  };
+}
+
+/**
  * PostHog on the server, through the Capture API.
  *
  * **Deduplicating a retried webhook takes two things, not one.** `dedupId`
@@ -83,6 +122,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
  *
  * Deduplication is also eventual, happening during a background merge, so both
  * rows are visible for a while and a test that counts immediately will fail.
+ *
+ * **`identify` sends one `$identify`**, with `$set` and `$unset` from the
+ * traits. It merges a visitor into the user only when the context carries
+ * `anonymousId`, never from the cookie: a merge is irreversible, and PostHog
+ * reports a refused one only as an ingestion warning in its own interface.
+ * Identified events are billed with person processing.
  *
  * @param credentials - The project API key, and the ingestion host for
  * anything other than PostHog's default US Cloud instance.
@@ -113,6 +158,27 @@ export function posthog(
 ): ServerProvider {
   const { apiKey, host = DEFAULT_HOST } = credentials;
 
+  const send = async (body: Record<string, unknown>, signal?: AbortSignal): Promise<void> => {
+    const response = await fetch(`${host}/i/v0/e/`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey, ...body }),
+      ...(signal ? { signal } : {}),
+    });
+
+    if (!response.ok) {
+      // The message stays free of the payload; the body rides on the
+      // error for a host that asks (ADR-0013). A body that will not read
+      // must not replace the real failure with a different one.
+      const text = await response.text().catch(() => '');
+      throw new VendorResponseError(`posthog: the capture endpoint answered ${response.status}`, {
+        provider: 'posthog',
+        status: response.status,
+        body: text,
+      });
+    }
+  };
+
   return {
     name: 'posthog',
     // capture() accepts any string as an event name, so the canonical
@@ -137,18 +203,24 @@ export function posthog(
       // visitor nobody has identified yet. Inventing a third value here
       // would orphan the event: PostHog would accept it and never connect it
       // to anything, on either side.
-      const id = context.user?.userId ?? anonymousId(context.cookies, apiKey);
+      // A host's own anonymous id comes before the cookie, because the host
+      // said so explicitly and the cookie is only inferred.
+      const id =
+        context.user?.userId ?? context.anonymousId ?? anonymousId(context.cookies, apiKey);
       if (!id) {
         throw new Error(
-          "posthog: cannot resolve distinct_id — no user.userId in context and no ph_<api_key>_posthog cookie among the cookies passed in context. Pass user.userId once the visitor is known, or ensure PostHog's browser tag has set its cookie first.",
+          "posthog: cannot resolve distinct_id — no user.userId or anonymousId in context and no ph_<api_key>_posthog cookie among the cookies passed in context. Pass user.userId once the visitor is known, or ensure PostHog's browser tag has set its cookie first.",
         );
       }
+      checkLength(id, report);
 
-      const properties: Record<string, unknown> = { ...data };
       // $set is the server-side slot for what is known *about* the person,
       // the same job `user_properties` does in GA4's Measurement Protocol
       // body — kept separate from the identifiers used to match someone.
-      if (context.traits) properties.$set = context.traits;
+      const properties: Record<string, unknown> = {
+        ...data,
+        ...personProperties(context.traits),
+      };
 
       // The deduplication key is `uuid`, and it is the whole quartet of
       // `uuid`, event name, timestamp and distinct_id that PostHog collapses,
@@ -171,7 +243,6 @@ export function posthog(
       }
 
       const body = {
-        api_key: apiKey,
         event: name,
         distinct_id: id,
         ...dedup,
@@ -186,23 +257,31 @@ export function posthog(
         timestamp: new Date(context.timestamp).toISOString(),
       };
 
-      const response = await fetch(`${host}/i/v0/e/`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      await send(body, context.signal);
+    },
 
-      if (!response.ok) {
-        // The message stays free of the payload; the body rides on the
-        // error for a host that asks (ADR-0013). A body that will not read
-        // must not replace the real failure with a different one.
-        const body = await response.text().catch(() => '');
-        throw new VendorResponseError(`posthog: the capture endpoint answered ${response.status}`, {
-          provider: 'posthog',
-          status: response.status,
-          body,
-        });
-      }
+    async identify(context: ResolvedContext, report: (message: string) => void): Promise<void> {
+      const id = context.user?.userId;
+      if (!id) throw new Error('posthog: identify needs user.userId');
+      checkLength(id, report);
+
+      // The body posthog-node's own `identify` sends, plus the merge field
+      // posthog-js sends. The merge is read from the host's explicit
+      // anonymousId only, never from the cookie (ADR-0011, ADR-0014).
+      await send(
+        {
+          event: '$identify',
+          distinct_id: id,
+          properties: {
+            ...personProperties(context.traits),
+            ...(context.anonymousId === undefined
+              ? {}
+              : { $anon_distinct_id: context.anonymousId }),
+          },
+          timestamp: new Date(context.timestamp).toISOString(),
+        },
+        context.signal,
+      );
     },
   };
 }

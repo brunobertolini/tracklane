@@ -254,6 +254,149 @@ describe('ga4 server', () => {
   });
 });
 
+describe('ga4 server identity', () => {
+  const report = (): { messages: string[]; fn: (message: string) => void } => {
+    const messages: string[] = [];
+    return { messages, fn: (message) => messages.push(message) };
+  };
+  const params = (): Record<string, unknown> =>
+    (sent().events as { params: Record<string, unknown> }[])[0]?.params ?? {};
+
+  it('keeps an engagement time the host measured', async () => {
+    await ga4(credentials).track('screen_view', { engagement_time_msec: 4200 }, context(), noop);
+
+    expect(params()).toMatchObject({ engagement_time_msec: 4200 });
+  });
+
+  it('still defaults engagement time when a session exists and none was given', async () => {
+    await ga4(credentials).track('purchase', {}, context(), noop);
+
+    expect(params()).toMatchObject({ engagement_time_msec: 1 });
+  });
+
+  it('leaves a null trait out and reports it by name, never clearing on a guess', async () => {
+    const { messages, fn } = report();
+    await ga4(credentials).track(
+      'purchase',
+      {},
+      context({ traits: { plan: 'pro', old: null } }),
+      fn,
+    );
+
+    expect(sent().user_properties).toEqual({ plan: { value: 'pro' } });
+    expect(messages.join()).toContain('old');
+  });
+
+  it('leaves out what GA4 will not hold and reports the name, not the value', async () => {
+    const { messages, fn } = report();
+    const value = 'v'.repeat(37);
+    const traits = { plan: 'pro', a_name_longer_than_24_chars: 'x', long_value: value };
+    await ga4(credentials).track('purchase', {}, context({ traits }), fn);
+
+    expect(sent().user_properties).toEqual({ plan: { value: 'pro' } });
+    expect(messages.join()).toContain('long_value');
+    expect(messages.join()).toContain('a_name_longer_than_24_chars');
+    expect(messages.join()).not.toContain(value);
+  });
+
+  it('sends every property over the limit and reports, choosing none', async () => {
+    const { messages, fn } = report();
+    const traits = Object.fromEntries(Array.from({ length: 26 }, (_, i) => [`p${i}`, i]));
+    await ga4(credentials).track('purchase', {}, context({ traits }), fn);
+
+    expect(Object.keys(sent().user_properties as object)).toHaveLength(26);
+    expect(messages).toHaveLength(1);
+  });
+
+  it('stamps every user property with traitsAt', async () => {
+    const ctx = context({ traits: { plan: 'pro' }, traitsAt: 1_600_000_000_000 });
+    await ga4(credentials).track('purchase', {}, ctx, noop);
+
+    expect(sent().user_properties).toEqual({
+      plan: { value: 'pro', timestamp_micros: 1_600_000_000_000_000 },
+    });
+  });
+
+  it('hands the abort signal to the request', async () => {
+    const controller = new AbortController();
+    await ga4(credentials).track('purchase', {}, context({ signal: controller.signal }), noop);
+
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ signal: controller.signal });
+  });
+
+  it('identifies with user properties and no events', async () => {
+    const ctx = context({ user: { userId: 'user-42' }, traits: { plan: 'pro' } });
+    await ga4(credentials).identify?.(ctx, noop);
+
+    expect(sent()).toEqual({
+      client_id: '1234567890.1700000000',
+      timestamp_micros: 1_700_000_000_000_000,
+      user_id: 'user-42',
+      user_properties: { plan: { value: 'pro' } },
+    });
+  });
+
+  it('sends nothing on identify when there is no user property to send', async () => {
+    await ga4(credentials).identify?.(context({ user: { userId: 'user-42' } }), noop);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('refuses to identify without a client id, as track does', async () => {
+    const ctx = context({ cookies: {}, user: { userId: 'u' }, traits: { plan: 'pro' } });
+
+    await expect(ga4(credentials).identify?.(ctx, noop)).rejects.toThrow('client_id');
+  });
+
+  it('sends no user_data unless the host opts in', async () => {
+    const ctx = context({ user: { userId: 'u', email: 'ana@example.com' } });
+    await ga4(credentials).track('purchase', {}, ctx, noop);
+
+    expect(sent()).not.toHaveProperty('user_data');
+  });
+
+  it('hashes user_data the way Google normalises it', async () => {
+    const hash = async (value: string): Promise<string> => {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+      return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+    };
+    const user = {
+      userId: 'u',
+      email: ' Ana.Silva@Gmail.com ',
+      phone: '+55 (11) 98765-4321',
+      firstName: ' Ána2 ',
+      lastName: 'Silva!',
+    };
+
+    await ga4(credentials, { userProvidedData: true }).track(
+      'purchase',
+      {},
+      context({ user }),
+      noop,
+    );
+
+    expect(sent().user_data).toEqual({
+      sha256_email_address: [await hash('anasilva@gmail.com')],
+      sha256_phone_number: [await hash('+5511987654321')],
+      address: [{ sha256_first_name: await hash('ána'), sha256_last_name: await hash('silva') }],
+    });
+  });
+
+  it('keeps the dots of a non-Gmail address', async () => {
+    const ctx = context({ user: { email: 'ana.silva@example.com' } });
+    await ga4(credentials, { userProvidedData: true }).track('purchase', {}, ctx, noop);
+
+    const digest = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode('ana.silva@example.com'),
+    );
+    const expected = Array.from(new Uint8Array(digest), (b) =>
+      b.toString(16).padStart(2, '0'),
+    ).join('');
+    expect(sent().user_data).toEqual({ sha256_email_address: [expected] });
+  });
+});
+
 // See the note in ga4.browser.test.ts: these are the invariants, not GA4's
 // behaviour.
 describe('ga4 server conformance', () => {

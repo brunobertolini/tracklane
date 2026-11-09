@@ -129,6 +129,25 @@ describe('ga4 browser', () => {
 // The invariants every provider owes, run against this one. What GA4 sends and
 // how it spells it is above; this is the part that must hold for a provider
 // written by somebody else, for a vendor nobody here has heard of.
+describe('ga4 browser identity', () => {
+  it('leaves a null trait out and reports it, never clearing on a guess', () => {
+    const messages: string[] = [];
+    ga4().identify?.({ userId: 'u-1' }, { plan: 'pro', old: null }, (m) => messages.push(m));
+
+    expect(calls).toEqual([
+      ['set', { user_id: 'u-1' }],
+      ['set', 'user_properties', { plan: 'pro' }],
+    ]);
+    expect(messages.join()).toContain('old');
+  });
+
+  it('clears the user id on reset', () => {
+    ga4().reset?.();
+
+    expect(calls).toEqual([['set', { user_id: null }]]);
+  });
+});
+
 describe('ga4 browser conformance', () => {
   conformsAsBrowserProvider({
     create: () => ga4('G-ABC'),

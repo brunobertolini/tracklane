@@ -342,6 +342,7 @@ export function meta(
         method: 'POST',
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
         body,
+        ...(context.signal ? { signal: context.signal } : {}),
       });
 
       if (!response.ok) {

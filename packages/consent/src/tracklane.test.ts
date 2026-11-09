@@ -166,7 +166,24 @@ describe('consentedTracking', () => {
     const { identify } = consentedTracking({ categories: STRICT, providers: [always] });
     identify({ userId: 'u-1' });
 
-    expect(always.identify).toHaveBeenCalledWith({ userId: 'u-1' }, undefined);
+    expect(always.identify).toHaveBeenCalledWith(
+      { userId: 'u-1' },
+      undefined,
+      expect.any(Function),
+    );
+  });
+
+  it('resets the current instance, then forwards the stored answer again', () => {
+    const order: string[] = [];
+    const always = fakeProvider('always', {
+      reset: () => order.push('reset'),
+      consent: (_command, state) => order.push(`consent:${state.analytics_storage}`),
+    });
+
+    const { reset } = consentedTracking({ categories: PERMISSIVE, providers: [always] });
+    reset();
+
+    expect(order).toEqual(['reset', 'consent:granted']);
   });
 
   it('keeps track and identify stable across a rebuild', () => {

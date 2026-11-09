@@ -19,6 +19,7 @@ beforeEach(() => {
       setPersonProperties: record('setPersonProperties'),
       opt_in_capturing: record('opt_in_capturing'),
       opt_out_capturing: record('opt_out_capturing'),
+      reset: record('reset'),
     },
   });
 });
@@ -110,6 +111,40 @@ describe('posthog browser', () => {
 // The invariants every provider owes, run against this one. What PostHog
 // sends and how it spells it is above; this is the part that must hold for a
 // provider written by somebody else, for a vendor nobody here has heard of.
+describe('posthog browser identity', () => {
+  it('unsets a null trait through the SDK own method and sets the rest', () => {
+    (window as unknown as { posthog: Record<string, unknown> }).posthog.unsetPersonProperties =
+      record('unsetPersonProperties');
+    posthog().identify?.({}, { plan: 'pro', old: null });
+
+    expect(calls).toEqual([
+      ['setPersonProperties', { plan: 'pro' }],
+      ['unsetPersonProperties', ['old']],
+    ]);
+  });
+
+  it('falls back to $unset in a capture on SDKs older than 1.387.0', () => {
+    posthog().identify?.({}, { old: null });
+
+    expect(calls).toEqual([['capture', '$set', { $unset: ['old'] }]]);
+  });
+
+  it('identifies a distinct_id over 200 characters as given, and reports it', () => {
+    const messages: string[] = [];
+    const long = 'x'.repeat(201);
+    posthog().identify?.({ userId: long }, undefined, (m) => messages.push(m));
+
+    expect(calls).toEqual([['identify', long]]);
+    expect(messages).toHaveLength(1);
+  });
+
+  it('resets through PostHog own reset', () => {
+    posthog().reset?.();
+
+    expect(calls).toEqual([['reset']]);
+  });
+});
+
 describe('posthog browser conformance', () => {
   conformsAsBrowserProvider({
     create: () => posthog(),

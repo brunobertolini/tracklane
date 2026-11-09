@@ -77,15 +77,19 @@ Passing such an id through `data` instead leaves the event unmapped: it sends
 nothing and reports a warning through `onError`. Put the ID in `events`, or use
 `null` for an intentional, silent exclusion.
 
-### Identity and consent
+### Identity, sign-out and consent
 
-Both are optional, and you implement them **only if your vendor documents the concept**. Omitting
-one is the honest translation of "this does not exist here", so the core simply skips you.
+All three are optional, and you implement them **only if your vendor documents the concept**.
+Omitting one is the honest translation of "this does not exist here", so the core simply skips you.
 
 ```ts
-identify: (user, traits) => window.acme?.setUser(user.userId, traits),
+identify: (user, traits, report) => window.acme?.setUser(user.userId, traits),
+reset: () => window.acme?.logout(),
 consent: (command, state) => window.acme?.consent(state.ad_storage === 'granted'),
 ```
+
+A trait set to `null` means "no longer known": translate it into your vendor's own way of removing
+a property, or leave it out and `report` it if your vendor has none.
 
 Consent arrives in Google's vocabulary, which is the most granular of the five. Reduce it to what
 your vendor understands: a *collapse* never claims more than the host declared. Expanding one
@@ -135,9 +139,14 @@ repository is expected to do the same; one you keep in your own codebase can do 
 runtime allows, but porting later is real work — OAuth 1.0a signing especially.
 
 The `context` you receive is already resolved: cookies parsed into a map, `timestamp` as epoch
-milliseconds whatever the caller passed. It carries `user`, `cookies`, `dedupId`, `timestamp`,
-`source`, `url`, `ip`, `userAgent`, `traits` and `consent`. Take what your vendor documents and
-ignore the rest. See the [API reference](/docs/api-reference/) for the full shape.
+milliseconds whatever the caller passed, `traitsAt` likewise. It carries `user`, `cookies`,
+`dedupId`, `timestamp`, `source`, `url`, `ip`, `userAgent`, `traits`, `traitsAt`, `anonymousId`,
+`signal` and `consent`. Take what your vendor documents and ignore the rest, but hand `signal` to
+your `fetch`.
+
+If your vendor keeps a person of its own, implement the optional `identify(context, report)`: it
+receives the same resolved context, with `user.userId` set, and sends no event. Merge two
+identities only from an id the host named in `anonymousId`, never from one you inferred. See the [API reference](/docs/api-reference/) for the full shape.
 
 ## Disagreeing with a shipped provider, without replacing it
 

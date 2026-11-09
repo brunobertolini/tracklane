@@ -119,6 +119,7 @@ export function linkedin(
           'X-Restli-Protocol-Version': '2.0.0',
         },
         body: JSON.stringify(event),
+        ...(context.signal ? { signal: context.signal } : {}),
       });
       if (!response.ok) {
         const body = await response.text().catch(() => '');

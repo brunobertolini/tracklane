@@ -43,7 +43,8 @@ unchanged.
 | --- | --- |
 | `track(name, data)` | `posthog.capture(name, data)` |
 | `identify({ userId })` | `posthog.identify(userId)` |
-| `identify(user, traits)` | `posthog.setPersonProperties(traits)` |
+| `identify(user, traits)` | `posthog.setPersonProperties(traits)`; `null` traits as `$unset` |
+| `reset()` | `posthog.reset()` |
 | `consent(command, { analytics_storage })` | `opt_in_capturing()` or `opt_out_capturing()` |
 | `dedupId` | **nothing** |
 
@@ -56,6 +57,14 @@ server event of the same action. The server adapter forwards a UUID-shaped `dedu
 as `uuid` for retried server events, with a pinned timestamp and identity; that
 does not provide a shared browser/server key. See the server section below.
 Use `transaction_id` (business data) when reconciling duplicate purchases.
+
+A `null` trait goes through `posthog.unsetPersonProperties`, which posthog-js added in 1.387.0 and
+which also clears its own caches. On older versions the adapter sends `$unset` inside a capture,
+the way PostHog documented it before.
+
+**`reset()` also forgets the opt-in.** `posthog.reset()` clears posthog-js persistence, consent
+state included, so call `consent('update', …)` again after it. `consentedTracking` from
+`@tracklane/consent` does that for you.
 
 ### Consent is one switch, not four
 
@@ -108,16 +117,21 @@ using for that visitor, so this library reads it in that order:
 
 1. `context.user.userId`, when the visitor is known — the same value you would pass to `identify()`
    on the browser.
-2. Otherwise, the anonymous id PostHog's own snippet already wrote to its cookie
+2. Otherwise, `context.anonymousId`, your own stable id for a visitor nobody has identified yet.
+3. Otherwise, the anonymous id PostHog's own snippet already wrote to its cookie
    (`ph_<api_key>_posthog`), read the same way GA4's `_ga` cookie is read for `client_id`.
 
-Without either, the library **refuses to send** and tells you why: there is no `distinct_id` to
+A `distinct_id` over 200 characters is sent as given and reported: PostHog truncates it, so two ids
+sharing that prefix become one person. Keep your ids shorter.
+
+Without any of them, the library **refuses to send** and tells you why: there is no `distinct_id` to
 put in the request, and inventing one would orphan the event on both sides.
 
 ### Person properties
 
 `context.traits` travels as `$set` inside `properties`, the same job GA4's `user_properties` does
-in its own body — separate from the identifier used to match someone.
+in its own body — separate from the identifier used to match someone. A trait set to `null` means
+"no longer known" and travels in `$unset` instead.
 
 ### Deduplicating a retried webhook
 
@@ -146,43 +160,45 @@ Deduplication is also **eventual**: it happens during a background merge, so bot
 for a while. A test that sends twice and immediately counts one will fail even when everything is
 correct.
 
-### Linking an anonymous visitor to a signed-in one
+### Identifying, and linking an anonymous visitor to a signed-in one
 
 A server conversion for a signed-in visitor lands on the `userId` person. The anonymous session
 that actually produced the sale — the campaign, the browsing before login — stays a **separate
 person** unless something links them. If your browser `identify()` always runs before anything
 valuable happens, PostHog has already done this and there is nothing to do here.
 
-When it may not have run, the link is one call, made once, at the moment both ids are first known.
-It is not something this library does for you, and that is deliberate: PostHog's guidance for
-backends is `alias`, once, and a merge repeated per event is both a billing decision and an
-irreversible one.
+When it may not have run, call `identify` once, at the moment both ids are first known:
 
 ```ts
-// Store the anonymous id while the browser still has it, the same way you store
-// GA4's cookies for a later webhook.
-const anonymousId = JSON.parse(
-  decodeURIComponent(cookies[`ph_${apiKey}_posthog`]),
-).distinct_id;
+const { identify } = createTracking({ providers: [posthog({ apiKey })] });
 
-// Then once, when they sign in or the order is created:
-await fetch('https://us.i.posthog.com/i/v0/e/', {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({
-    api_key: apiKey,
-    event: '$create_alias',
-    distinct_id: userId,
-    properties: { alias: anonymousId },
-  }),
+await identify({
+  user: { userId },
+  traits: { plan: 'pro', trial_ends: null },
+  anonymousId, // the id the earlier PostHog events were captured under
 });
 ```
 
-Two things to know before you wire it up. A merge is **refused** when the anonymous id was already
-claimed by another identified person, and that refusal never appears in the HTTP response — it
-shows up as an ingestion warning in PostHog's own interface, so a shared device degrades quietly.
-And merges cannot be undone except by hand, so a stale or mis-forwarded cookie is a permanent
-wrong join.
+It sends one `$identify` with `$set` and `$unset`, and adds `$anon_distinct_id` **only** when you
+pass `anonymousId`. It never reads the merge from the cookie, and `track` never merges at all.
+
+`anonymousId` must be the id PostHog already holds the earlier events under. If posthog-js minted
+it, store it while the browser has it, the same way you store GA4's cookies for a later webhook:
+
+```ts
+const anonymousId = JSON.parse(
+  decodeURIComponent(cookies[`ph_${apiKey}_posthog`]),
+).distinct_id;
+```
+
+If you passed your own id as `anonymousId` from the first event, it is that id. Anything else merges
+nothing, or the wrong visitor.
+
+Three things to know before you wire it up. A merge is **refused** when the anonymous id was
+already claimed by another identified person, and that refusal never appears in the HTTP response —
+it shows up as an ingestion warning in PostHog's own interface, so a shared device degrades quietly.
+Merges cannot be undone except by hand. And identified events are billed with person processing,
+so how often you call `identify` is a billing decision.
 
 ## The traps
 
