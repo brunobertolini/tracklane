@@ -132,6 +132,10 @@ interface EventContext {
 Here there is no `identify` and nothing is held between calls: a server instance is shared by
 every request, so a retained identity would attach one visitor to another visitor's conversion.
 
+**Amended by [ADR-0014](0014-identity-is-a-verb-on-both-halves.md), 2026-11-09:** the server gains
+`identify(context)`, taking the same per-call context as `track`. Nothing is held between calls,
+so the reason above still holds.
+
 **Consent on the server is a field, not a command. [falsified]** In the browser, consent is a
 *command* fired at a moment. On the server there is no command and no tag to degrade — there is a
 *field inside the payload*. Same vocabulary, different mechanism.
