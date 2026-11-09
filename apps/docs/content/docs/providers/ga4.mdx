@@ -53,9 +53,15 @@ Rarely needed: GA4's names *are* the canonical vocabulary, so events pass throug
 | --- | --- |
 | `track(name, data)` | `gtag('event', name, data)`; an explicit factory ID adds `send_to` |
 | `identify({ userId })` | `gtag('set', { user_id })` |
-| `identify(user, traits)` | `gtag('set', 'user_properties', traits)` |
+| `identify(user, traits)` | `gtag('set', 'user_properties', traits)`; `null` traits left out and reported |
+| `reset()` | `gtag('set', { user_id: null })` |
 | `consent(command, state)` | `gtag('consent', command, state)`, verbatim |
 | `dedupId` | **nothing** |
+
+**`reset()` clears `user_id` only.** User properties already set stay with the tag until the page
+reloads, and a `null` trait does not clear one yet: whether `gtag` clears a property given `null`
+is not verified, so the adapter leaves it out and reports it. If your page sets user properties,
+sign out with `reset()` and a reload.
 
 The consent vocabulary is Google's own spelling, so nothing is translated and no signal you did
 not declare can be invented on your behalf.
@@ -94,6 +100,44 @@ it sends and warns, because the event will be accepted and appear in no report.
 **Wire up `onError` before you rely on any of this.** It is optional in the type and it is not
 optional in practice: without it the library is silent, exactly as a hand-written `fetch` would be,
 and a conversion dropped for a missing cookie tells nobody.
+
+### User properties
+
+`context.traits` becomes `user_properties`. What GA4 documents it will not hold is left out and
+reported by name, never trimmed or cleared on your behalf:
+
+- a name over 24 characters, or a string value over 36;
+- a `null` trait, because clearing a property through the Measurement Protocol is not verified yet;
+- more than 25 properties are all sent and reported: which ones Google keeps is Google's, and
+  choosing which matter is yours, in the line that builds `traits`.
+
+`context.traitsAt` stamps each property with the time it was true, when that is not the event's.
+An `engagement_time_msec` in your event data is kept; the adapter only adds `1` when a session
+exists and you gave none.
+
+### Identifying without an event
+
+```ts
+const { identify } = createTracking({ providers: [ga4({ measurementId, apiSecret })] });
+
+await identify({ user: { userId }, traits: { plan: 'pro' }, cookies });
+```
+
+This sends one request with `client_id`, `user_id` and `user_properties` and no events, which Google
+documents. It needs the `_ga` cookie exactly as `track` does. With no user property to send, it
+sends nothing: `user_id` already travels on every `track`.
+
+### User-provided data
+
+```ts
+ga4({ measurementId, apiSecret }, { userProvidedData: true });
+```
+
+Sends `user_data` built from `user` (email, phone, first and last name), normalised and SHA-256
+hashed [the way Google documents](https://developers.google.com/analytics/devguides/collection/ga4/uid-data).
+It is off by default: it starts sending personal data to Google that you may only be passing for
+Meta, and your property needs user-provided data collection turned on in its admin. There is no
+consent check in it. To withhold it for a call, pass `user: { userId }`.
 
 ### When there is no browser: webhooks, and visitors without cookies
 

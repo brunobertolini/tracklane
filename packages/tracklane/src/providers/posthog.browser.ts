@@ -16,8 +16,11 @@ interface PosthogSdk {
   capture: (event: string, properties?: EventData) => void;
   identify: (distinctId: string) => void;
   setPersonProperties: (properties: Record<string, unknown>) => void;
+  /** Since posthog-js 1.387.0. */
+  unsetPersonProperties?: (names: string[]) => void;
   opt_in_capturing: () => void;
   opt_out_capturing: () => void;
+  reset: () => void;
 }
 
 interface PosthogWindow {
@@ -32,6 +35,9 @@ export interface PosthogBrowserConfig {
    */
   events?: Record<string, EventBinding<string>>;
 }
+
+/** PostHog documents that it shortens any `distinct_id` longer than this. */
+const MAX_DISTINCT_ID = 200;
 
 // Server rendering reaches this module with no browser at all, where
 // `window` is a ReferenceError rather than `undefined`.
@@ -95,16 +101,52 @@ export function posthog(config: PosthogBrowserConfig = {}): BrowserProvider {
       sdk().capture(name, data);
     },
 
-    identify(user: UserData, traits?: Record<string, unknown>): void {
+    identify(
+      user: UserData,
+      traits?: Record<string, unknown>,
+      report?: (message: string) => void,
+    ): void {
       // distinct_id is PostHog's only identity slot. email, phone and names
       // have no separate slot the way Meta's user_data has one for each —
       // they map to nothing here, exactly the gap GA4 has for the same
       // fields.
-      if (user.userId !== undefined) sdk().identify(user.userId);
+      if (user.userId !== undefined) {
+        if (user.userId.length > MAX_DISTINCT_ID) {
+          report?.(
+            `distinct_id is longer than ${MAX_DISTINCT_ID} characters: PostHog truncates it, so two ids sharing that prefix become one person`,
+          );
+        }
+        sdk().identify(user.userId);
+      }
+      if (!traits) return;
+
+      const set: Record<string, unknown> = {};
+      const unset: string[] = [];
+      for (const [name, value] of Object.entries(traits)) {
+        if (value === null) unset.push(name);
+        else set[name] = value;
+      }
+
       // setPersonProperties works against whichever identity is already
       // current, so it needs no id of its own — the same shape as GA4's
       // separate `set user_properties` push.
-      if (traits) sdk().setPersonProperties(traits);
+      if (Object.keys(set).length > 0) sdk().setPersonProperties(set);
+      if (unset.length > 0) {
+        const instance = sdk();
+        // posthog-js 1.387.0 added `unsetPersonProperties`, which also clears
+        // its flag and dedupe caches, so a later set of the same value is not
+        // skipped. Older versions document only `$unset` inside a capture,
+        // which is the same event that method sends.
+        if (instance.unsetPersonProperties) instance.unsetPersonProperties(unset);
+        else instance.capture('$set', { $unset: unset });
+      }
+    },
+
+    reset(): void {
+      // PostHog's own sign-out. It also clears posthog-js persistence,
+      // including the opt-in state, which is why a host calls `consent`
+      // again after it.
+      sdk().reset();
     },
 
     consent(_command: 'default' | 'update', state: ConsentState): void {

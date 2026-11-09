@@ -153,7 +153,11 @@ describe('createTracking (browser)', () => {
     });
 
     expect(() => identify({ userId: 'u-1' }, { plan: 'pro' })).not.toThrow();
-    expect(identify_).toHaveBeenCalledWith({ userId: 'u-1' }, { plan: 'pro' });
+    expect(identify_).toHaveBeenCalledWith(
+      { userId: 'u-1' },
+      { plan: 'pro' },
+      expect.any(Function),
+    );
   });
 
   it('forwards consent only to providers that document a command', () => {
@@ -259,4 +263,43 @@ it('isolates a throwing warning handler and continues to the next provider', () 
   });
   expect(() => tracking.track('purchase')).not.toThrow();
   expect(sent).toEqual(['first', 'second']);
+});
+
+describe('reset and identify reports (browser)', () => {
+  it('forwards reset only to providers that hold a user', () => {
+    const withUser = provider({ name: 'a', reset: vi.fn() });
+    const without = provider({ name: 'b' });
+
+    createTracking({ providers: [withUser, without] }).reset();
+
+    expect(withUser.reset).toHaveBeenCalledOnce();
+  });
+
+  it('reports a reset that fails instead of throwing', () => {
+    const errors: { event: string }[] = [];
+    const failing = provider({
+      reset: () => {
+        throw new Error('no tag');
+      },
+    });
+
+    createTracking({ providers: [failing], onError: (e) => errors.push(e) }).reset();
+
+    expect(errors).toMatchObject([{ event: 'reset', severity: 'error' }]);
+  });
+
+  it('hands identify a reporter that emits warnings', () => {
+    const errors: { event: string; severity: string }[] = [];
+    const reporting = provider({
+      identify: (_user, _traits, report) => {
+        report?.('left out');
+      },
+    });
+
+    createTracking({ providers: [reporting], onError: (e) => errors.push(e) }).identify({
+      userId: 'u-1',
+    });
+
+    expect(errors).toMatchObject([{ event: 'identify', severity: 'warning', message: 'left out' }]);
+  });
 });

@@ -38,6 +38,7 @@ export type {
 export { isVendorResponseError, VendorResponseError } from './errors.js';
 export type {
   EventContext,
+  IdentifyContext,
   ResolvedContext,
   ServerProvider,
   ServerTracking,

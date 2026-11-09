@@ -26,3 +26,13 @@ it('accepts default routing and preserves explicit GA4 destination calls', () =>
   // @ts-expect-error The config-only form does not take a second configuration.
   ga4({}, {});
 });
+
+it('keeps providers without reset or an identify reporter valid', () => {
+  const legacy = {
+    name: 'custom',
+    default: 'passthrough' as const,
+    track(_name: string, _data: EventData, _options: TrackOptions): void {},
+    identify(_user: { userId?: string }, _traits?: Record<string, unknown>): void {},
+  };
+  expectTypeOf(legacy).toExtend<BrowserProvider>();
+});

@@ -194,3 +194,65 @@ describe('createTracking (server)', () => {
     expect(track_.mock.calls[1]?.[2].user).toBeUndefined();
   });
 });
+
+describe('identify (server)', () => {
+  it('reaches only the providers that keep a person', async () => {
+    const identify = vi.fn<NonNullable<ServerProvider['identify']>>(async () => {});
+    const withPerson = provider({ name: 'a', identify });
+    const without = provider({ name: 'b' });
+
+    await createTracking({ providers: [withPerson, without] }).identify({
+      user: { userId: 'u-1' },
+    });
+
+    expect(identify).toHaveBeenCalledOnce();
+    expect(without.track).not.toHaveBeenCalled();
+  });
+
+  it('resolves the context the way track does, traitsAt included', async () => {
+    const identify = vi.fn<NonNullable<ServerProvider['identify']>>(async () => {});
+
+    await createTracking({ providers: [provider({ identify })] }).identify({
+      user: { userId: 'u-1' },
+      cookies: 'a=1; b=2',
+      timestamp: new Date(1_700_000_000_000),
+      traitsAt: new Date(1_600_000_000_000),
+    });
+
+    expect(identify.mock.calls[0]?.[0]).toMatchObject({
+      cookies: { a: '1', b: '2' },
+      timestamp: 1_700_000_000_000,
+      traitsAt: 1_600_000_000_000,
+    });
+  });
+
+  it('never rejects, and reports a failure under the identify event', async () => {
+    const errors: { event: string; severity: string }[] = [];
+    const failing = provider({
+      identify: async () => {
+        throw new Error('down');
+      },
+    });
+
+    await createTracking({ providers: [failing], onError: (e) => errors.push(e) }).identify({
+      user: { userId: 'u-1' },
+    });
+
+    expect(errors).toMatchObject([{ event: 'identify', severity: 'error', message: 'down' }]);
+  });
+
+  it('reports an adapter caveat as a warning', async () => {
+    const errors: { severity: string }[] = [];
+    const warning = provider({
+      identify: async (_context, report) => {
+        report('caveat');
+      },
+    });
+
+    await createTracking({ providers: [warning], onError: (e) => errors.push(e) }).identify({
+      user: { userId: 'u-1' },
+    });
+
+    expect(errors).toMatchObject([{ severity: 'warning', message: 'caveat' }]);
+  });
+});

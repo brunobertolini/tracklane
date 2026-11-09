@@ -92,6 +92,12 @@ What an adapter actually receives: `EventContext` with `cookies` parsed into a m
 
 <AutoTypeTable path="../../packages/tracklane/src/server.ts" name="ResolvedContext" />
 
+### `IdentifyContext`
+
+What `identify` takes: the same context as `track`, with `user.userId` required.
+
+<AutoTypeTable path="../../packages/tracklane/src/server.ts" name="IdentifyContext" />
+
 ### `ServerTrackingOptions`
 
 What `createTracking` takes: the providers to send to, and an optional error channel.

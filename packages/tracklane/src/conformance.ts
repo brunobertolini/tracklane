@@ -228,6 +228,29 @@ export function conformsAsServerProvider(options: {
     expect(without).not.toContain('DEDUP-XYZ');
   });
 
+  it('identifies the same way twice, and never merges unless told to', async () => {
+    const provider = create();
+    if (!provider.identify) return;
+
+    // Same rule as for events: a generated id or a clock read makes two
+    // identical calls differ. And a merge is irreversible, so one must never
+    // appear without an anonymousId the host named (ADR-0014).
+    const identity = {
+      ...context(),
+      user: { userId: 'USER-XYZ' },
+      traits: { plan: 'pro' },
+    };
+
+    reset();
+    await provider.identify(identity, noop);
+    const first = JSON.stringify(captured());
+
+    reset();
+    await create().identify?.(identity, noop);
+    expect(JSON.stringify(captured())).toBe(first);
+    expect(first).not.toContain('anon_distinct_id');
+  });
+
   it('throws a VendorResponseError when the vendor did not accept the send', async () => {
     // Adapters stay honest and loud. Swallowing a non-2xx is how a host ends
     // up believing it is measuring something, and the dispatcher is already

@@ -93,8 +93,8 @@ export const { track, identify, consent } = createTracking({
 ```
 
 On the server, do the same, but never carry user data across calls. A server instance is shared
-by every request, so identity travels with each `track`, never in the instance. That is why the
-server has no `identify`.
+by every request, so identity travels with each call, never in the instance. The server's
+`identify` takes the person in its context, exactly as `track` does.
 
 ## Errors
 

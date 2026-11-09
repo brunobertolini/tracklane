@@ -161,6 +161,13 @@ it('preserves refusal body without leaking it into the message', async () => {
   });
 });
 
+it('hands the abort signal to the request', async () => {
+  const controller = new AbortController();
+  await provider().track('12345', {}, context({ signal: controller.signal }), noop);
+
+  expect(transport.mock.calls[0]?.[1]).toMatchObject({ signal: controller.signal });
+});
+
 describe('linkedin server conformance', () => {
   conformsAsServerProvider({
     create: provider,

@@ -213,6 +213,88 @@ describe('posthog server', () => {
 
 // See the note in posthog.browser.test.ts: these are the invariants, not
 // PostHog's behaviour.
+describe('posthog server identity', () => {
+  const report = (): { messages: string[]; fn: (message: string) => void } => {
+    const messages: string[] = [];
+    return { messages, fn: (message) => messages.push(message) };
+  };
+
+  it('uses the host anonymousId ahead of the cookie when no user is known', async () => {
+    await posthog(credentials).track('purchase', {}, context({ anonymousId: 'visitor-1' }), noop);
+
+    expect(sent()).toMatchObject({ distinct_id: 'visitor-1' });
+  });
+
+  it('still prefers the user id over the anonymousId', async () => {
+    const ctx = context({ user: { userId: 'user-42' }, anonymousId: 'visitor-1' });
+    await posthog(credentials).track('purchase', {}, ctx, noop);
+
+    expect(sent()).toMatchObject({ distinct_id: 'user-42' });
+  });
+
+  it('sends a null trait as $unset and the rest as $set', async () => {
+    const ctx = context({ traits: { plan: 'pro', company: null } });
+    await posthog(credentials).track('purchase', {}, ctx, noop);
+
+    expect(sent()).toMatchObject({
+      properties: { $set: { plan: 'pro' }, $unset: ['company'] },
+    });
+  });
+
+  it('sends a distinct_id over 200 characters as given, and reports it', async () => {
+    const long = 'x'.repeat(201);
+    const { messages, fn } = report();
+    await posthog(credentials).track('purchase', {}, context({ user: { userId: long } }), fn);
+
+    expect(sent()).toMatchObject({ distinct_id: long });
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).not.toContain(long);
+  });
+
+  it('hands the abort signal to the request', async () => {
+    const controller = new AbortController();
+    await posthog(credentials).track('purchase', {}, context({ signal: controller.signal }), noop);
+
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ signal: controller.signal });
+  });
+
+  it('identifies with $identify, $set and $unset, and no merge without anonymousId', async () => {
+    const ctx = context({ user: { userId: 'user-42' }, traits: { plan: 'pro', company: null } });
+    await posthog(credentials).identify?.(ctx, noop);
+
+    const body = sent();
+    expect(body).toMatchObject({
+      api_key: 'phc_ABC',
+      event: '$identify',
+      distinct_id: 'user-42',
+      properties: { $set: { plan: 'pro' }, $unset: ['company'] },
+      timestamp: '2023-11-14T22:13:20.000Z',
+    });
+    // The cookie holds an anonymous id, and it must never become a merge.
+    expect(JSON.stringify(body)).not.toContain('$anon_distinct_id');
+  });
+
+  it('merges only the anonymousId the host names', async () => {
+    const ctx = context({ user: { userId: 'user-42' }, anonymousId: 'visitor-1' });
+    await posthog(credentials).identify?.(ctx, noop);
+
+    expect(sent()).toMatchObject({ properties: { $anon_distinct_id: 'visitor-1' } });
+  });
+
+  it('refuses to identify nobody', async () => {
+    await expect(posthog(credentials).identify?.(context(), noop)).rejects.toThrow('user.userId');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('throws a VendorResponseError when identify is refused', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('bad', { status: 400 }));
+
+    await expect(
+      posthog(credentials).identify?.(context({ user: { userId: 'u' } }), noop),
+    ).rejects.toSatisfy(isVendorResponseError);
+  });
+});
+
 describe('posthog server conformance', () => {
   conformsAsServerProvider({
     create: () => posthog(credentials),

@@ -434,6 +434,16 @@ describe('meta server', () => {
 
 // See the note in meta.browser.test.ts: these are the invariants, not Meta's
 // behaviour.
+describe('meta server cancellation', () => {
+  it('hands the abort signal to the request', async () => {
+    fetchMock.mockResolvedValueOnce(ok());
+    const controller = new AbortController();
+    await meta(credentials).track('purchase', {}, context({ signal: controller.signal }), noop);
+
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ signal: controller.signal });
+  });
+});
+
 describe('meta server conformance', () => {
   conformsAsServerProvider({
     create: () => meta(credentials),
