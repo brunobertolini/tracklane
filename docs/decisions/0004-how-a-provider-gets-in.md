@@ -133,6 +133,15 @@ captures and screenshots remain local outside Git and are not available in the
 PR. This exception changes where the evidence is kept, not the verification steps
 or what the vendor report can establish.
 
+**PR #33 exception, 2026-11-09:** Bruno merged the ADR-0014 identity work without
+the vendor-report evidence this record requires, because no PostHog test project
+or GA4 report access was available. What exists is the outgoing requests from the
+built library and Google's validation endpoint, for GA4 only. The PostHog
+`$identify` merge, `$unset` on both halves and PostHog `reset()` have never run
+against the vendor. Until they do, they are unverified, and a defect found there
+is a bug, not a surprise. This is a skipped gate, not a different place to keep
+the evidence.
+
 Two consequences we accept:
 
 The vendor account is the author's problem, including for outside contributors. Testing a Meta,

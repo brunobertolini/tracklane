@@ -119,6 +119,9 @@ For PR #31, Bruno explicitly requested no test images or artifacts in the PR.
 Keep its evidence locally outside Git; the PR contains only a validation summary.
 ADR-0004 records this exception to the evidence-attachment requirement.
 
+For PR #33 (ADR-0014), Bruno skipped the live vendor gate: PostHog identify,
+`$unset` and `reset()` are unverified against the vendor. ADR-0004 records it.
+
 ## Documentation policy
 
 **Do not replicate vendor documentation.** Our pages cover what is ours — the
