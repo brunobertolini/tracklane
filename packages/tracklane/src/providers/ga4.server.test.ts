@@ -342,6 +342,47 @@ describe('ga4 server identity', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('identifies with user_data alone when the host opts in', async () => {
+    const ctx = context({ user: { userId: 'user-42', email: 'ana@example.com' } });
+    await ga4(credentials, { userProvidedData: true }).identify?.(ctx, noop);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sent()).not.toHaveProperty('user_properties');
+    expect(sent()).not.toHaveProperty('events');
+    expect(sent()).toMatchObject({
+      user_id: 'user-42',
+      user_data: { sha256_email_address: [expect.any(String)] },
+    });
+  });
+
+  it('identifies with user properties and user_data together', async () => {
+    const ctx = context({
+      user: { userId: 'user-42', email: 'ana@example.com' },
+      traits: { plan: 'pro' },
+    });
+    await ga4(credentials, { userProvidedData: true }).identify?.(ctx, noop);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sent()).toMatchObject({
+      user_properties: { plan: { value: 'pro' } },
+      user_data: { sha256_email_address: [expect.any(String)] },
+    });
+  });
+
+  it('sends nothing on identify with userProvidedData on and nothing to send', async () => {
+    const ctx = context({ user: { userId: 'user-42' } });
+    await ga4(credentials, { userProvidedData: true }).identify?.(ctx, noop);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing on identify with only an email when userProvidedData is off', async () => {
+    const ctx = context({ user: { userId: 'user-42', email: 'ana@example.com' } });
+    await ga4(credentials).identify?.(ctx, noop);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('refuses to identify without a client id, as track does', async () => {
     const ctx = context({ cookies: {}, user: { userId: 'u' }, traits: { plan: 'pro' } });
 

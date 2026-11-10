@@ -236,8 +236,9 @@ async function userData(user: UserData | undefined): Promise<Record<string, unkn
  * Google Analytics 4 on the server, through the Measurement Protocol.
  *
  * **`identify` sends user properties with no event**, which Google
- * documents. With no user property to send it sends nothing, because each
- * `track` already carries `user_id`.
+ * documents, and `user_data` with them when `userProvidedData` is on. With
+ * neither to send it sends nothing, because each `track` already carries
+ * `user_id`.
  *
  * @param credentials - The measurement id and API secret.
  * @param config - Rarely needed event name overrides, and the opt-in for
@@ -367,10 +368,12 @@ export function ga4(
       if (context.user?.userId === undefined) throw new Error('ga4: identify needs user.userId');
 
       const body = await person(context, report);
-      // A request with neither events nor user properties is not a case
-      // Google documents, and it would teach GA4 nothing: `user_id` already
-      // travels on every `track`.
-      if (!body.user_properties) return;
+      // A request with no events, no user properties and no user-provided
+      // data is not a case Google documents, and it would teach GA4 nothing:
+      // `user_id` already travels on every `track`. `user_data` alone is
+      // worth a request: it is the signed-in person's profile, and there may
+      // be no event to carry it.
+      if (!body.user_properties && !body.user_data) return;
 
       await send(body, context.signal);
     },

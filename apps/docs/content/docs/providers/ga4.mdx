@@ -124,8 +124,10 @@ await identify({ user: { userId }, traits: { plan: 'pro' }, cookies });
 ```
 
 This sends one request with `client_id`, `user_id` and `user_properties` and no events, which Google
-documents. It needs the `_ga` cookie exactly as `track` does. With no user property to send, it
-sends nothing: `user_id` already travels on every `track`.
+documents. It needs the `_ga` cookie exactly as `track` does. With
+[user-provided data](#user-provided-data) on, the same request carries `user_data`, and `user_data`
+alone is enough to send it. With neither user properties nor `user_data`, it sends nothing:
+`user_id` already travels on every `track`.
 
 ### User-provided data
 
