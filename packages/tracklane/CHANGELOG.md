@@ -1,5 +1,11 @@
 # tracklane
 
+## 0.8.1
+
+### Patch Changes
+
+- [#35](https://github.com/brunobertolini/tracklane/pull/35) [`4c204ea`](https://github.com/brunobertolini/tracklane/commit/4c204eac9116d437787d88f56b126d4491e6c391) Thanks [@brunobertolini](https://github.com/brunobertolini)! - GA4 server `identify` now sends its request when it carries `user_data` (with `userProvidedData: true`) even if there is no user property to send. With neither user properties nor `user_data` it still sends nothing.
+
 ## 0.8.0
 
 ### Minor Changes
