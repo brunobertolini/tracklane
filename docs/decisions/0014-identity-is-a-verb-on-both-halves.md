@@ -73,10 +73,12 @@ already travels there. Nothing is retained between calls, so a server instance s
   `posthog-js` sends.
 - **GA4:** one Measurement Protocol request with `client_id`, `user_id` and `user_properties` and
   no events, which Google documents ("a request that only contains user properties, without any
-  events"). It needs `client_id` exactly as `track` does, and throws without it. **With no user
-  property to send, GA4 sends nothing.** A request with neither events nor properties is not a
-  documented case, and `user_id` alone does not make later hits carry it: each `track` already
-  sends `user_id` itself.
+  events"). It needs `client_id` exactly as `track` does, and throws without it. With
+  `userProvidedData` on, the same request carries `user_data`, and `user_data` alone is enough to
+  send it (amended in 0.8.1: a signed-in profile may have no event to ride on). **With neither user
+  properties nor `user_data`, GA4 sends nothing.** A request with none of events, properties or
+  user data is not a documented case, and `user_id` alone does not make later hits carry it: each
+  `track` already sends `user_id` itself.
 - **Meta, LinkedIn:** no `identify`. Their identity travels with each event, which `track` already
   does.
 
