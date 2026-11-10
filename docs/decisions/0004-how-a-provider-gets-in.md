@@ -142,6 +142,13 @@ against the vendor. Until they do, they are unverified, and a defect found there
 is a bug, not a surprise. This is a skipped gate, not a different place to keep
 the evidence.
 
+**PR #35 exception, 2026-11-10:** Bruno merged the GA4 server `identify` change
+that sends a request carrying only `user_data` (no events, no user properties)
+without running the gate. No GA4 test credentials were available, so that body
+was never sent to Google's validation endpoint or confirmed in a report. Google
+documents a no-event request with user properties; one with only `user_data` is
+not known to be documented. Until it runs, it is unverified.
+
 Two consequences we accept:
 
 The vendor account is the author's problem, including for outside contributors. Testing a Meta,

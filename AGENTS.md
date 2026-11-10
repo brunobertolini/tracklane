@@ -122,6 +122,9 @@ ADR-0004 records this exception to the evidence-attachment requirement.
 For PR #33 (ADR-0014), Bruno skipped the live vendor gate: PostHog identify,
 `$unset` and `reset()` are unverified against the vendor. ADR-0004 records it.
 
+For PR #35, Bruno skipped the live vendor gate: GA4 server `identify` with only
+`user_data` is unverified against the vendor. ADR-0004 records it.
+
 ## Documentation policy
 
 **Do not replicate vendor documentation.** Our pages cover what is ours — the
